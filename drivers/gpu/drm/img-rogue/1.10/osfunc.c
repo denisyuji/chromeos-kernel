@@ -621,10 +621,7 @@ PVRSRV_ERROR OSClockMonotonicus64(IMG_UINT64 *pui64Time)
 
 IMG_UINT64 OSClockMonotonicRawns64(void)
 {
-	struct timespec ts;
-
-	getrawmonotonic(&ts);
-	return (IMG_UINT64) ts.tv_sec * 1000000000 + ts.tv_nsec;
+	return (IMG_UINT64) ktime_get_raw_ns();
 }
 
 IMG_UINT64 OSClockMonotonicRawus64(void)

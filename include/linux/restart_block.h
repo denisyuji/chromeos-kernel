@@ -9,7 +9,7 @@
 #include <linux/types.h>
 #include <linux/time64.h>
 
-struct timespec;
+struct timespec64;
 struct old_timespec32;
 struct pollfd;
 
