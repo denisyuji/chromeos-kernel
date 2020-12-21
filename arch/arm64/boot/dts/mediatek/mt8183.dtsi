@@ -1212,15 +1212,39 @@
 				<GIC_SPI 278 IRQ_TYPE_LEVEL_LOW>;
 			interrupt-names = "job", "mmu", "gpu";
 
-			clocks = <&topckgen CLK_TOP_MFGPLL_CK>;
+			/*
+			 * Note: the properties below are not part of the
+			 * upstream binding.
+			 */
+			clocks =
+				<&topckgen CLK_TOP_MFGPLL_CK>,
+				<&topckgen CLK_TOP_MUX_MFG>,
+				<&clk26m>,
+				<&mfgcfg CLK_MFG_BG3D>;
+			clock-names =
+				"clk_main_parent",
+				"clk_mux",
+				"clk_sub_parent",
+				"subsys_mfg_cg";
 
-			power-domains =
-				<&spm MT8183_POWER_DOMAIN_MFG_CORE0>,
-				<&spm MT8183_POWER_DOMAIN_MFG_CORE1>,
-				<&spm MT8183_POWER_DOMAIN_MFG_2D>;
-			power-domain-names = "core0", "core1", "core2";
+			power-domains =	<&spm MT8183_POWER_DOMAIN_MFG_CORE0>;
+			power-domain-names = "core0";
 
 			operating-points-v2 = <&gpu_opp_table>;
+
+			#cooling-cells = <2>;
+			cooling-min-level = <0>;
+			cooling-max-level = <15>;
+		};
+
+		gpu_core1: mali_gpu_core1 {
+			compatible = "mediatek,gpu_core1";
+			power-domains = <&spm MT8183_POWER_DOMAIN_MFG_CORE1>;
+		};
+
+		gpu_core2: mali_gpu_core2 {
+			compatible = "mediatek,gpu_core2";
+			power-domains = <&spm MT8183_POWER_DOMAIN_MFG_2D>;
 		};
 
 		mmsys: syscon@14000000 {
