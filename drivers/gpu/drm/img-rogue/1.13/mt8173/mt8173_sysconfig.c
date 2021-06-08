@@ -376,9 +376,28 @@ static unsigned long mtk_mfg_get_dynamic_power(unsigned long freq,
 	#undef NUM_RANGE
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0))
+static int mtk_mfg_get_real_power(struct devfreq *df, u32 *power,
+				  unsigned long freq,
+				  unsigned long voltage)
+{
+	if (!df || !power)
+		return -EINVAL;
+
+	*power = mtk_mfg_get_static_power(df, voltage) +
+		     mtk_mfg_get_dynamic_power(df, freq, voltage);
+
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) */
+
 static struct devfreq_cooling_power sPowerOps = {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0))
 	.get_static_power = mtk_mfg_get_static_power,
 	.get_dynamic_power = mtk_mfg_get_dynamic_power,
+#else
+	.get_real_power = mtk_mfg_get_real_power,
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0) */
 };
 #endif
 
