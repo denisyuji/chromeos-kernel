@@ -281,7 +281,6 @@ static const struct file_operations pvr_drm_fops = {
 const struct drm_driver pvr_drm_generic_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_RENDER,
 
-	.dev_priv_size		= 0,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
 	.load			= NULL,
 	.unload			= NULL,
