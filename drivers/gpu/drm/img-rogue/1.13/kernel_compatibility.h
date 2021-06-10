@@ -477,4 +477,24 @@ __pvr_access_ok_compat(int type, const void __user * addr, unsigned long size)
 
 #endif /* defined(CONFIG_L4) */
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0))
+
+struct dma_buf_map {
+	void *vaddr;
+};
+
+#define dma_buf_vmap(dmabuf, map) \
+	({ \
+		(map)->vaddr = dma_buf_vmap(dmabuf); \
+		(map)->vaddr ? 0 : ((dmabuf) && (dmabuf)->ops->vmap) ? -ENOMEM : -EINVAL; \
+	})
+
+#define dma_buf_vunmap(dmabuf, map) \
+	({ \
+		dma_buf_vunmap(dmabuf, (map)->vaddr); \
+		(map)->vaddr = NULL; \
+	})
+
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0) */
+
 #endif /* __KERNEL_COMPATIBILITY_H__ */
