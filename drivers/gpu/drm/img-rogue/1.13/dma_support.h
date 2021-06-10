@@ -52,6 +52,7 @@ typedef struct _DMA_ALLOC_
 {
 	IMG_UINT64       ui64Size;
 	IMG_CPU_VIRTADDR pvVirtAddr;
+	pgprot_t         PageProps;
 	IMG_DEV_PHYADDR  sBusAddr;
 	IMG_HANDLE       hHandle;
 #if defined(LINUX)

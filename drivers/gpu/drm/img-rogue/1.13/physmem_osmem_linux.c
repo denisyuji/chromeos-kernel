@@ -79,6 +79,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pmr_impl.h"
 #include "cache_km.h"
 #include "devicemem_server_utils.h"
+#include "pvr_vmap.h"
 
 /* ourselves */
 #include "physmem_osmem.h"
@@ -948,11 +949,7 @@ _ZeroPageArray(IMG_UINT32 uiNumToClean,
 		                        uiMaxPagesToMap :
 		                        uiNumToClean;
 
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-		pvAddr = vmap(ppsCleanArray, uiToClean, VM_WRITE, pgprot);
-#else
-		pvAddr = vm_map_ram(ppsCleanArray, uiToClean, -1, pgprot);
-#endif
+		pvAddr = pvr_vmap(ppsCleanArray, uiToClean, VM_WRITE, pgprot);
 		if (!pvAddr)
 		{
 			if (uiMaxPagesToMap <= 1)
@@ -972,13 +969,7 @@ _ZeroPageArray(IMG_UINT32 uiNumToClean,
 		}
 
 		OSDeviceMemSet(pvAddr, 0, PAGE_SIZE * uiToClean);
-
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-		vunmap(pvAddr);
-#else
-		vm_unmap_ram(pvAddr, uiToClean);
-#endif
-
+		pvr_vunmap(pvAddr, uiToClean, pgprot);
 		ppsCleanArray = &(ppsCleanArray[uiToClean]);
 		uiNumToClean -= uiToClean;
 	}
@@ -1503,7 +1494,7 @@ _ApplyCacheMaintenance(PVRSRV_DEVICE_NODE *psDevNode,
 			IMG_CPU_PHYADDR sUnused =
 				{ IMG_CAST_TO_CPUPHYADDR_UINT(0xCAFEF00DDEADBEEFULL) };
 
-			pvAddr = vm_map_ram(ppsCleanArray, uiToClean, -1, pgprot);
+			pvAddr = pvr_vmap(ppsCleanArray, uiToClean, -1, pgprot);
 			if (!pvAddr)
 			{
 				PVR_DPF((PVR_DBG_ERROR,
@@ -1518,8 +1509,7 @@ _ApplyCacheMaintenance(PVRSRV_DEVICE_NODE *psDevNode,
 						sUnused,
 						PVRSRV_CACHE_OP_FLUSH);
 
-			vm_unmap_ram(pvAddr, uiToClean);
-
+			pvr_vunmap(pvAddr, uiToClean, pgprot);
 			ppsCleanArray = &(ppsCleanArray[uiToClean]);
 			uiNumToClean -= uiToClean;
 		}
@@ -3048,6 +3038,7 @@ PMRSysPhysAddrOSMem(PMR_IMPL_PRIVDATA pvPriv,
 typedef struct _PMR_OSPAGEARRAY_KERNMAP_DATA_ {
 	void *pvBase;
 	IMG_UINT32 ui32PageCount;
+	pgprot_t PageProps;
 } PMR_OSPAGEARRAY_KERNMAP_DATA;
 
 static PVRSRV_ERROR
@@ -3177,11 +3168,7 @@ PMRAcquireKernelMappingDataOSMem(PMR_IMPL_PRIVDATA pvPriv,
 		goto e1;
 	}
 
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-	pvAddress = vmap(pagearray, ui32PageCount, VM_READ | VM_WRITE, prot);
-#else
-	pvAddress = vm_map_ram(pagearray, ui32PageCount, -1, prot);
-#endif
+	pvAddress = pvr_vmap(pagearray, ui32PageCount, VM_READ | VM_WRITE, prot);
 	if (pvAddress == NULL)
 	{
 		eError = PVRSRV_ERROR_OUT_OF_MEMORY;
@@ -3191,6 +3178,7 @@ PMRAcquireKernelMappingDataOSMem(PMR_IMPL_PRIVDATA pvPriv,
 	*ppvKernelAddressOut = pvAddress + uiMapOffset;
 	psData->pvBase = pvAddress;
 	psData->ui32PageCount = ui32PageCount;
+	psData->PageProps = prot;
 	*phHandleOut = psData;
 
 	if (uiPageSizeDiff)
@@ -3221,11 +3209,7 @@ static void PMRReleaseKernelMappingDataOSMem(PMR_IMPL_PRIVDATA pvPriv,
 	PMR_OSPAGEARRAY_KERNMAP_DATA *psData = hHandle;
 	PVR_UNREFERENCED_PARAMETER(pvPriv);
 
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-	vunmap(psData->pvBase);
-#else
-	vm_unmap_ram(psData->pvBase, psData->ui32PageCount);
-#endif
+	pvr_vunmap(psData->pvBase, psData->ui32PageCount, psData->PageProps);
 	OSFreeMem(psData);
 }
 

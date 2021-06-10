@@ -51,6 +51,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "allocmem.h"
 #include "dma_support.h"
+#include "pvr_vmap.h"
 #include "kernel_compatibility.h"
 
 #define DMA_MAX_IOREMAP_ENTRIES 2
@@ -58,7 +59,7 @@ static IMG_BOOL gbEnableDmaIoRemapping = IMG_FALSE;
 static DMA_ALLOC gsDmaIoRemapArray[DMA_MAX_IOREMAP_ENTRIES] = {{0}};
 
 static void*
-SysDmaAcquireKernelAddress(struct page *psPage, IMG_UINT64 ui64Size, void *pvOSDevice)
+SysDmaAcquireKernelAddress(struct page *psPage, IMG_UINT64 ui64Size, DMA_ALLOC *psDmaAlloc)
 {
 	IMG_BOOL bPageByPage = IMG_TRUE;
 	IMG_UINT32 uiIdx;
@@ -67,6 +68,7 @@ SysDmaAcquireKernelAddress(struct page *psPage, IMG_UINT64 ui64Size, void *pvOSD
 	PVRSRV_DEVICE_NODE *psDevNode = OSAllocZMemNoStats(sizeof(*psDevNode));
 	PVRSRV_DEVICE_CONFIG *psDevConfig = OSAllocZMemNoStats(sizeof(*psDevConfig));
 	struct page **pagearray = OSAllocZMemNoStats(ui32PgCount * sizeof(struct page *));
+	void *pvOSDevice = psDmaAlloc->pvOSDevice;
 #if defined(CONFIG_ARM64)
 	pgprot_t prot = pgprot_writecombine(PAGE_KERNEL);
 #else
@@ -137,11 +139,8 @@ SysDmaAcquireKernelAddress(struct page *psPage, IMG_UINT64 ui64Size, void *pvOSD
 	}
 
 	/* Remap pages into VMALLOC space */
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-	pvVirtAddr = vmap(pagearray, ui32PgCount, VM_READ | VM_WRITE, prot);
-#else
-	pvVirtAddr = vm_map_ram(pagearray, ui32PgCount, -1, prot);
-#endif
+	pvVirtAddr = pvr_vmap(pagearray, ui32PgCount, VM_READ | VM_WRITE, prot);
+	psDmaAlloc->PageProps = prot;
 
 	/* Clean-up tmp buffers */
 	OSFreeMem(psDevConfig);
@@ -152,13 +151,9 @@ e0:
 	return pvVirtAddr;
 }
 
-static void SysDmaReleaseKernelAddress(void *pvVirtAddr, IMG_UINT64 ui64Size)
+static void SysDmaReleaseKernelAddress(void *pvVirtAddr, IMG_UINT64 ui64Size, pgprot_t pgprot)
 {
-#if !defined(CONFIG_64BIT) || defined(PVRSRV_FORCE_SLOWER_VMAP_ON_64BIT_BUILDS)
-	vunmap(pvVirtAddr);
-#else
-	vm_unmap_ram(pvVirtAddr, ui64Size >> OSGetPageShift());
-#endif
+	pvr_vunmap(pvVirtAddr, ui64Size >> OSGetPageShift(), pgprot);
 }
 
 /*!
@@ -223,7 +218,7 @@ PVRSRV_ERROR SysDmaAllocMem(DMA_ALLOC *psDmaAlloc)
 		psDmaAlloc->psPage = psPage;
 #endif
 
-		psDmaAlloc->pvVirtAddr = SysDmaAcquireKernelAddress(psPage, uiSize, psDmaAlloc->pvOSDevice);
+		psDmaAlloc->pvVirtAddr = SysDmaAcquireKernelAddress(psPage, uiSize, psDmaAlloc);
 		if (! psDmaAlloc->pvVirtAddr)
 		{
 			PVR_DPF((PVR_DBG_ERROR,
@@ -282,7 +277,7 @@ void SysDmaFreeMem(DMA_ALLOC *psDmaAlloc)
 
 	if (psDmaAlloc->pvVirtAddr != psDmaAlloc->hHandle)
 	{
-		SysDmaReleaseKernelAddress(psDmaAlloc->pvVirtAddr, uiSize);
+		SysDmaReleaseKernelAddress(psDmaAlloc->pvVirtAddr, uiSize, psDmaAlloc->PageProps);
 	}
 
 	if (! psDmaAlloc->hHandle)
