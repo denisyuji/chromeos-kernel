@@ -137,18 +137,11 @@ int mtk_mfg_enable(struct mtk_mfg *mfg)
 {
 	int ret;
 
-	ret = regulator_enable(mfg->vgpu);
-	if (ret)
-	{
-		dev_err(mfg->dev, "Enable vgpu regulator failed with error %d\n", ret);
- 		return ret;
-	}
-
 	ret = pm_runtime_get_sync(mfg->dev);
 	if (ret)
 	{
 		dev_err(mfg->dev, "pm_runtime_get_sync failed with error %d\n", ret);
- 		goto err_regulator_disable;
+ 		return ret;
 	}
 
 	ret = mtk_mfg_enable_clock(mfg);
@@ -166,8 +159,6 @@ int mtk_mfg_enable(struct mtk_mfg *mfg)
 
 err_pm_runtime_put:
 	pm_runtime_put_sync(mfg->dev);
-err_regulator_disable:
-	regulator_disable(mfg->vgpu);
 	return ret;
 }
 
@@ -182,7 +173,6 @@ void mtk_mfg_disable(struct mtk_mfg *mfg)
 
 	mtk_mfg_disable_clock(mfg);
 	pm_runtime_put_sync(mfg->dev);
-	regulator_disable(mfg->vgpu);
 
 	dev_dbg(mfg->dev, "Disabled\n");
 }
