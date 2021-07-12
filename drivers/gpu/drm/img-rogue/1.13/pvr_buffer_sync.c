@@ -194,7 +194,7 @@ pvr_buffer_sync_pmrs_fence_count(u32 nr_pmrs, struct _PMR_ **pmrs,
 			continue;
 
 		resv_list = dma_resv_shared_list(resv);
-		fence = dma_resv_get_excl(resv);
+		fence = dma_resv_excl_fence(resv);
 
 		if (fence &&
 		    (!exclusive || !resv_list || !resv_list->shared_count))
@@ -253,7 +253,7 @@ pvr_buffer_sync_check_fences_create(struct pvr_fence_context *fence_ctx,
 		}
 
 		resv_list = dma_resv_shared_list(resv);
-		fence = dma_resv_get_excl(resv);
+		fence = dma_resv_excl_fence(resv);
 
 		if (fence &&
 		    (!exclusive || !resv_list || !resv_list->shared_count)) {
