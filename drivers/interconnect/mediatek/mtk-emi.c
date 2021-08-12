@@ -12,6 +12,7 @@
 #include <linux/soc/mediatek/mtk_dvfsrc.h>
 #include <dt-bindings/interconnect/mtk,mt6873-emi.h>
 #include <dt-bindings/interconnect/mtk,mt8183-emi.h>
+#include <dt-bindings/interconnect/mtk,mt8195-emi.h>
 
 enum mtk_icc_name {
 	SLAVE_DDR_EMI,
@@ -31,7 +32,8 @@ enum mtk_icc_name {
 	MASTER_MDLASYS,
 	MASTER_MDLA_PORT_0,
 	MASTER_UFS,
-	MASTER_PCIE,
+	MASTER_PCIE_0,
+	MASTER_PCIE_1,
 	MASTER_USB,
 	MASTER_WIFI,
 	MASTER_BT,
@@ -102,7 +104,8 @@ DEFINE_MNODE(vpu_port_1, MASTER_VPU_PORT_1, 0, MASTER_VPUSYS);
 DEFINE_MNODE(mdlasys, MASTER_MDLASYS, 0, SLAVE_DDR_EMI);
 DEFINE_MNODE(mdla_port_0, MASTER_MDLA_PORT_0, 0, MASTER_MDLASYS);
 DEFINE_MNODE(ufs, MASTER_UFS, 0, SLAVE_DDR_EMI);
-DEFINE_MNODE(pcie, MASTER_PCIE, 0, SLAVE_DDR_EMI);
+DEFINE_MNODE(pcie_0, MASTER_PCIE_0, 0, SLAVE_DDR_EMI);
+DEFINE_MNODE(pcie_1, MASTER_PCIE_1, 0, SLAVE_DDR_EMI);
 DEFINE_MNODE(usb, MASTER_USB, 0, SLAVE_DDR_EMI);
 DEFINE_MNODE(wifi, MASTER_WIFI, 0, SLAVE_DDR_EMI);
 DEFINE_MNODE(bt, MASTER_BT, 0, SLAVE_DDR_EMI);
@@ -156,7 +159,7 @@ static struct mtk_icc_node *mt6873_icc_nodes[] = {
 	[MT6873_MASTER_MDLASYS] = &mdlasys,
 	[MT6873_MASTER_MDLA_0] = &mdla_port_0,
 	[MT6873_MASTER_UFS] = &ufs,
-	[MT6873_MASTER_PCIE] = &pcie,
+	[MT6873_MASTER_PCIE] = &pcie_0,
 	[MT6873_MASTER_USB] = &usb,
 	[MT6873_MASTER_WIFI] = &wifi,
 	[MT6873_MASTER_BT] = &bt,
@@ -179,10 +182,52 @@ static struct mtk_icc_desc mt6873_icc = {
 	.num_nodes = ARRAY_SIZE(mt6873_icc_nodes),
 };
 
+static struct mtk_icc_node *mt8195_icc_nodes[] = {
+	[MT8195_SLAVE_DDR_EMI] = &ddr_emi,
+	[MT8195_MASTER_MCUSYS] = &mcusys,
+	[MT8195_MASTER_GPUSYS] = &gpu,
+	[MT8195_MASTER_MMSYS] = &mmsys,
+	[MT8195_MASTER_MM_VPU] = &mm_vpu,
+	[MT8195_MASTER_MM_DISP] = &mm_disp,
+	[MT8195_MASTER_MM_VDEC] = &mm_vdec,
+	[MT8195_MASTER_MM_VENC] = &mm_venc,
+	[MT8195_MASTER_MM_CAM] = &mm_cam,
+	[MT8195_MASTER_MM_IMG] = &mm_img,
+	[MT8195_MASTER_MM_MDP] = &mm_mdp,
+	[MT8195_MASTER_VPUSYS] = &vpusys,
+	[MT8195_MASTER_VPU_0] = &vpu_port_0,
+	[MT8195_MASTER_VPU_1] = &vpu_port_1,
+	[MT8195_MASTER_MDLASYS] = &mdlasys,
+	[MT8195_MASTER_MDLA_0] = &mdla_port_0,
+	[MT8195_MASTER_UFS] = &ufs,
+	[MT8195_MASTER_PCIE_0] = &pcie_0,
+	[MT8195_MASTER_PCIE_1] = &pcie_1,
+	[MT8195_MASTER_USB] = &usb,
+	[MT8195_MASTER_WIFI] = &wifi,
+	[MT8195_MASTER_BT] = &bt,
+	[MT8195_MASTER_NETSYS] = &netsys,
+	[MT8195_MASTER_DBGIF] = &dbgif,
+	[MT8195_SLAVE_HRT_DDR_EMI] = &hrt_ddr_emi,
+	[MT8195_MASTER_HRT_MMSYS] = &hrt_mmsys,
+	[MT8195_MASTER_HRT_MM_DISP] = &hrt_mm_disp,
+	[MT8195_MASTER_HRT_MM_VDEC] = &hrt_mm_vdec,
+	[MT8195_MASTER_HRT_MM_VENC] = &hrt_mm_venc,
+	[MT8195_MASTER_HRT_MM_CAM] = &hrt_mm_cam,
+	[MT8195_MASTER_HRT_MM_IMG] = &hrt_mm_img,
+	[MT8195_MASTER_HRT_MM_MDP] = &hrt_mm_mdp,
+	[MT8195_MASTER_HRT_DBGIF] = &hrt_dbgif,
+};
+
+static struct mtk_icc_desc mt8195_icc = {
+	.nodes = mt8195_icc_nodes,
+	.num_nodes = ARRAY_SIZE(mt8195_icc_nodes),
+};
+
 static const struct of_device_id emi_icc_of_match[] = {
 	{ .compatible = "mediatek,mt8183-dvfsrc", .data = &mt8183_icc },
 	{ .compatible = "mediatek,mt8192-dvfsrc", .data = &mt6873_icc },
 	{ .compatible = "mediatek,mt6873-dvfsrc", .data = &mt6873_icc },
+	{ .compatible = "mediatek,mt8195-dvfsrc", .data = &mt8195_icc },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, emi_icc_of_match);
