@@ -25,6 +25,7 @@ properties:
       - mediatek,mt6873-dvfsrc
       - mediatek,mt8183-dvfsrc
       - mediatek,mt8192-dvfsrc
+      - mediatek,mt8195-dvfsrc
 
   '#interconnect-cells':
     const: 1
