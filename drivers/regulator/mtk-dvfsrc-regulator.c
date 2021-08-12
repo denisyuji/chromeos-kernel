@@ -140,6 +140,25 @@ static const struct dvfsrc_regulator_init_data regulator_mt6873_data = {
 	.regulator_info = &mt6873_regulators[0],
 };
 
+static const unsigned int mt8195_voltages[] = {
+	550000,
+	600000,
+	650000,
+	750000,
+};
+
+static struct dvfsrc_regulator mt8195_regulators[] = {
+	MT_DVFSRC_REGULAR("dvfsrc-vcore", VCORE,
+			  mt8195_voltages),
+	MT_DVFSRC_REGULAR("dvfsrc-vscp", VSCP,
+			  mt8195_voltages),
+};
+
+static const struct dvfsrc_regulator_init_data regulator_mt8195_data = {
+	.size = ARRAY_SIZE(mt8195_regulators),
+	.regulator_info = &mt8195_regulators[0],
+};
+
 static const struct of_device_id mtk_dvfsrc_regulator_match[] = {
 	{
 		.compatible = "mediatek,mt8183-dvfsrc",
@@ -150,6 +169,10 @@ static const struct of_device_id mtk_dvfsrc_regulator_match[] = {
 	}, {
 		.compatible = "mediatek,mt6873-dvfsrc",
 		.data = &regulator_mt6873_data,
+	}, {
+		.compatible = "mediatek,mt8195-dvfsrc",
+		.data = &regulator_mt8195_data,
+	}, {
 	}, {
 		/* sentinel */
 	},
