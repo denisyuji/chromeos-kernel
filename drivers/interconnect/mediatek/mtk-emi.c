@@ -271,6 +271,14 @@ static int emi_icc_set(struct icc_node *src, struct icc_node *dst)
 	return ret;
 }
 
+static int emi_icc_get_bw(struct icc_node *node, u32 *avg, u32 *peak)
+{
+	*avg = 0;
+	*peak = 0;
+
+	return 0;
+}
+
 static int emi_icc_remove(struct platform_device *pdev);
 static int emi_icc_probe(struct platform_device *pdev)
 {
@@ -308,6 +316,7 @@ static int emi_icc_probe(struct platform_device *pdev)
 	provider->set = emi_icc_set;
 	provider->aggregate = emi_icc_aggregate;
 	provider->xlate = of_icc_xlate_onecell;
+	provider->get_bw = emi_icc_get_bw;
 	INIT_LIST_HEAD(&provider->nodes);
 	provider->data = data;
 
