@@ -7,6 +7,7 @@
 
 #include <dt-bindings/clock/mt8183-clk.h>
 #include <dt-bindings/gce/mt8183-gce.h>
+#include <dt-bindings/interconnect/mtk,mt8183-emi.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/memory/mt8183-larb-port.h>
@@ -650,6 +651,7 @@
 		ddr_emi: dvfsrc@10012000 {
 			compatible = "mediatek,mt8183-dvfsrc";
 			reg = <0 0x10012000 0 0x1000>;
+			#interconnect-cells = <1>;
 		};
 
 		pwrap: pwrap@1000d000 {
