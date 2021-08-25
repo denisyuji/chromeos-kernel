@@ -58,7 +58,7 @@ static int mtk_mdp_clock_on(struct mtk_mdp_dev *mdp)
 	int err;
 
 	list_for_each_entry(comp_node, &mdp->comp_list, node) {
-		err = mtk_mdp_comp_clock_on(dev, comp_node);
+		err = mtk_mdp_comp_clock_on(comp_node);
 		if (err) {
 			status = err;
 			goto err_mtk_mdp_comp_clock_on;
@@ -69,18 +69,17 @@ static int mtk_mdp_clock_on(struct mtk_mdp_dev *mdp)
 
 err_mtk_mdp_comp_clock_on:
 	list_for_each_entry_continue_reverse(comp_node, &mdp->comp_list, node)
-		mtk_mdp_comp_clock_off(dev, comp_node);
+		mtk_mdp_comp_clock_off(comp_node);
 
 	return status;
 }
 
 static void mtk_mdp_clock_off(struct mtk_mdp_dev *mdp)
 {
-	struct device *dev = &mdp->pdev->dev;
 	struct mtk_mdp_comp *comp_node;
 
 	list_for_each_entry(comp_node, &mdp->comp_list, node)
-		mtk_mdp_comp_clock_off(dev, comp_node);
+		mtk_mdp_comp_clock_off(comp_node);
 }
 
 static void mtk_mdp_wdt_worker(struct work_struct *work)

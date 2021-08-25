@@ -12,6 +12,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <soc/mediatek/smi.h>
+#include <linux/pm_runtime.h>
 
 #include "mtk_mdp_comp.h"
 #include "mtk_mdp_core.h"
@@ -50,14 +51,22 @@ static const struct of_device_id mtk_mdp_comp_driver_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mtk_mdp_comp_driver_dt_match);
 
-int mtk_mdp_comp_clock_on(struct device *dev, struct mtk_mdp_comp *comp)
+int mtk_mdp_comp_clock_on(struct mtk_mdp_comp *comp)
 {
 	int i, err, status;
 
 	if (comp->larb_dev) {
 		err = mtk_smi_larb_get(comp->larb_dev);
 		if (err)
-			dev_err(dev, "failed to get larb, err %d.\n", err);
+			dev_err(comp->dev, "failed to get larb, err %d.\n", err);
+	}
+
+	err = pm_runtime_get_sync(comp->dev);
+	if (err < 0) {
+		dev_err(comp->dev,
+			"failed to runtime get, err %d.\n",
+			err);
+		return err;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(comp->clk); i++) {
@@ -66,7 +75,7 @@ int mtk_mdp_comp_clock_on(struct device *dev, struct mtk_mdp_comp *comp)
 		err = clk_prepare_enable(comp->clk[i]);
 		if (err) {
 			status = err;
-			dev_err(dev, "failed to enable clock, err %d. i:%d\n", err, i);
+			dev_err(comp->dev, "failed to enable clock, err %d. i:%d\n", err, i);
 			goto err_clk_prepare_enable;
 		}
 	}
@@ -80,10 +89,12 @@ err_clk_prepare_enable:
 		clk_disable_unprepare(comp->clk[i]);
 	}
 
+	pm_runtime_put_sync(comp->dev);
+
 	return status;
 }
 
-void mtk_mdp_comp_clock_off(struct device *dev, struct mtk_mdp_comp *comp)
+int mtk_mdp_comp_clock_off(struct mtk_mdp_comp *comp)
 {
 	int i;
 
@@ -95,6 +106,8 @@ void mtk_mdp_comp_clock_off(struct device *dev, struct mtk_mdp_comp *comp)
 
 	if (comp->larb_dev)
 		mtk_smi_larb_put(comp->larb_dev);
+
+	return pm_runtime_put_sync(comp->dev);
 }
 
 static int mtk_mdp_comp_bind(struct device *dev, struct device *master, void *data)
@@ -103,6 +116,7 @@ static int mtk_mdp_comp_bind(struct device *dev, struct device *master, void *da
 	struct mtk_mdp_dev *mdp = data;
 
 	mtk_mdp_register_component(mdp, comp);
+	pm_runtime_enable(dev);
 
 	return 0;
 }
@@ -113,6 +127,7 @@ static void mtk_mdp_comp_unbind(struct device *dev, struct device *master,
 	struct mtk_mdp_comp *comp = dev_get_drvdata(dev);
 	struct mtk_mdp_dev *mdp = data;
 
+	pm_runtime_disable(dev);
 	mtk_mdp_unregister_component(mdp, comp);
 }
 
@@ -132,6 +147,7 @@ int mtk_mdp_comp_init(struct mtk_mdp_comp *comp, struct device *dev)
 		 (enum mtk_mdp_comp_type)of_device_get_match_data(dev);
 
 	INIT_LIST_HEAD(&comp->node);
+	comp->dev = dev;
 
 	for (i = 0; i < ARRAY_SIZE(comp->clk); i++) {
 		comp->clk[i] = of_clk_get(node, i);
