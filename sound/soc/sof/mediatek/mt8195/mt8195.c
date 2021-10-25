@@ -121,6 +121,11 @@ static struct mtk_adsp_ipc_ops dsp_ops = {
 	.handle_request		= mt8195_dsp_handle_request,
 };
 
+static struct snd_soc_acpi_mach sof_mt8195_mach = {
+	.drv_name = "mt8195_mt6359",
+	.sof_tplg_filename = "sof-mt8195-mt6359-rt1019-rt5682.tplg",
+};
+
 static int platform_parse_resource(struct platform_device *pdev, void *data)
 {
 	struct resource *mmio;
@@ -496,6 +501,19 @@ static int mt8195_ipc_msg_data(struct snd_sof_dev *sdev,
 	return 0;
 }
 
+static struct snd_soc_acpi_mach *mt8195_machine_select(struct snd_sof_dev *sdev)
+{
+	struct snd_sof_pdata *sof_pdata = sdev->pdata;
+	struct snd_soc_acpi_mach *mach;
+
+	mach = &sof_mt8195_mach;
+
+	sof_pdata->tplg_filename = mach->sof_tplg_filename;
+	sof_pdata->machine = mach;
+
+	return mach;
+}
+
 static struct snd_soc_dai_driver mt8195_dai[] = {
 {
 	.name = "SOF_DL2",
@@ -556,6 +574,9 @@ static const struct snd_sof_dsp_ops sof_mt8195_ops = {
 
 	/* misc */
 	.get_bar_index	= mt8195_get_bar_index,
+
+	/* machine driver */
+	.machine_select = mt8195_machine_select,
 
 	/* module loading */
 	.load_module	= snd_sof_parse_module_memcpy,
