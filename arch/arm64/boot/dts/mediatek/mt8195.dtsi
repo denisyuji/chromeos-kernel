@@ -387,7 +387,7 @@
 					clock-names = "ether";
 					#power-domain-cells = <0>;
 				};
-
+#if 0
 				power-domain@MT8195_POWER_DOMAIN_ADSP {
 					reg = <MT8195_POWER_DOMAIN_ADSP>;
 					clocks = <&topckgen CLK_TOP_ADSP>,
@@ -440,7 +440,7 @@
 						#power-domain-cells = <0>;
 					};
 				};*/
-
+#endif
 				power-domain@MT8195_POWER_DOMAIN_MFG0 {
 					reg = <MT8195_POWER_DOMAIN_MFG0>;
 					#address-cells = <1>;
