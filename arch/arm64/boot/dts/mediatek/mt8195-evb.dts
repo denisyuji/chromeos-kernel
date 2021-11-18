@@ -24,6 +24,34 @@
 		device_type = "memory";
 		reg = <0 0x40000000 0 0x80000000>;
 	};
+
+	reserved_memory: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		scp_mem_reserved: scp_mem_region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x50000000 0 0x2900000>;
+			no-map;
+		};
+		dfd-buffer{
+			compatible = "mediatek,dfd-buffer";
+			reg = <0 0x6A000000 0 0x100000>;
+			no-map;
+		};
+	};
+};
+
+
+&scp {
+	memory-region = <&scp_mem_reserved>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&scp_pins>;
+	cros_ec {
+		compatible = "google,cros-ec-rpmsg";
+		mediatek,rpmsg-name = "cros-ec-rpmsg";
+	};
 };
 
 &uart0 {
@@ -649,6 +677,8 @@
 	pmic: pmic {
 		compatible = "mediatek,mt6359";
 		interrupt-controller;
+		interrupt-parent = <&pio>;
+		interrupts = <222 IRQ_TYPE_LEVEL_HIGH>;
 		#interrupt-cells = <2>;
 		mt6359codec: mt6359codec {
 		};
