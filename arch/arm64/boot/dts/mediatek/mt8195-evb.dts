@@ -40,6 +40,15 @@
 			no-map;
 		};
 	};
+
+	usb_vbus: regulator@2 {
+		compatible = "regulator-fixed";
+		regulator-name = "usb-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		regulator-always-on;
+	};
 };
 
 
@@ -58,12 +67,43 @@
 	status = "okay";
 };
 
-&xhci1 {
+&xhci0 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_vbus>;
 	status = "okay";
+};
+&xhci1 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_vbus>;
+	mediatek,frame-cnt;
+	status = "okay";
+};
+&xhci2 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_vbus>;
+	mediatek,frame-cnt;
+	status = "okay";
+};
+&xhci3 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	vbus-supply = <&usb_vbus>;
+	mediatek,frame-cnt;
+	status = "okay";
+};
+&u3phy0 {
+	status="okay";
 };
 
 &u3phy1 {
 	status = "okay";
+};
+
+&u3phy2 {
+	status="okay";
+};
+
+&u3phy3 {
+	status="okay";
 };
 
 &auxadc {
