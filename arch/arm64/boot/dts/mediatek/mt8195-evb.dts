@@ -15,6 +15,16 @@
 		serial0 = &uart0;
 	};
 
+	backlight_lcd0: backlight_lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm0 0 500000>;
+		enable-gpios = <&pio 82 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+		status = "okay";
+	};
+
 	chosen {
 		stdout-path = "serial0:115200n8";
 		bootargs = "earlycon earlyprintk";
@@ -23,6 +33,28 @@
 	memory@40000000 {
 		device_type = "memory";
 		reg = <0 0x40000000 0 0x80000000>;
+	};
+
+	panel: panel {
+		compatible = "lg,lp120up1";
+		power-supply = <&panel_fixed_3v3>;
+		backlight = <&backlight_lcd0>;
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&edp_out>;
+			};
+		};
+	};
+
+	panel_fixed_3v3: regulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "PANEL_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&pio 55 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_fixed_pins>;
 	};
 
 	reserved_memory: reserved-memory {
@@ -110,7 +142,93 @@
 	status = "okay";
 };
 
+&disp_dpi1 {
+	port {
+		dpi1_out: endpoint@0 {
+			remote-endpoint = <&hdmi0_in>;
+		};
+	};
+};
 
+&dp_intf0 {
+	status = "okay";
+	ports {
+		port {
+			dp_intf0_out: endpoint {
+				remote-endpoint = <&edp_in>;
+			};
+		};
+	};
+};
+&dp_intf1 {
+	status = "okay";
+	ports {
+		port {
+			dp_intf1_out: endpoint {
+				remote-endpoint = <&dptx_in>;
+			};
+		};
+	};
+};
+
+&edp_tx {
+	pinctrl-names = "default";
+	pinctrl-0 = <&edp_pin>;
+	status = "okay";
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			edp_in: endpoint {
+			remote-endpoint = <&dp_intf0_out>;
+			};
+		};
+		port@1 {
+			reg = <1>;
+			edp_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
+};
+
+&dp_tx {
+	pinctrl-names = "default";
+	pinctrl-0 = <&dptx_pin>;
+	status = "okay";
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			dptx_in: endpoint {
+			remote-endpoint = <&dp_intf1_out>;
+			};
+		};
+	};
+};
+
+&disp_pwm0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&disp_pwm0_pin_default>;
+};
+
+&hdmi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&hdmi_pin>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			hdmi0_in: endpoint {
+				remote-endpoint = <&dpi1_out>;
+			};
+		};
+	};
+};
 
 &mmc0 {
 	/* Note: fixup for bad compatible on mt8195.dtsi */
@@ -1035,6 +1153,22 @@
 	regulator-always-on;
 };
 
+&i2c1 {
+	status = "okay";
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pin>;
+	i2c-scl-internal-delay-ns = <12500>;
+	touchpad@15 {
+		compatible = "elan,ekth3000";
+		reg = <0x15>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touchpad_pins>;
+		interrupt-parent = <&pio>;
+		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
+		wakeup-source;
+	};
+};
 
 &i2c3 {
 	status = "okay";
@@ -1050,6 +1184,71 @@
 		pinctrl-0 = <&cr50_irq>;
 	};
 };
+
+&i2c4 {
+	status = "okay";
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pin>;
+	touchscreen: touchscreen@10 {
+		compatible = "hid-over-i2c";
+		reg = <0x10>;
+		interrupt-parent = <&pio>;
+		interrupts = <92 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touchscreen_pins>;
+		post-power-on-delay-ms = <10>;
+		hid-descr-addr = <0x0001>;
+	};
+};
+
+&i2c5 {
+	status = "okay";
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c5_pin>;
+};
+
+&i2c7 {
+	status = "okay";
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c7_pin>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	subpmic_mtk: mt6360_pmu@34 {
+		#interrupt-cells = <2>;
+		status = "ok";
+		compatible = "mediatek,mt6360";
+		reg = <0x34>;
+		wakeup-source;
+		interrupt-controller;
+		pinctrl-names = "default";
+		pinctrl-0 = <&subpmic_default>;
+		interrupt-parent = <&pio>;
+		interrupts = <130 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-names = "IRQB";
+		subpmic_mtk_regulator: regulator {
+			compatible = "mediatek,mt6360_ldo";
+			mt_pmic_vfp_ldo_reg: ldo1 {
+				regulator-compatible = "LDO1";
+				regulator-name = "mt6360,ldo1";
+				regulator-min-microvolt = <3000000>;
+				regulator-max-microvolt = <3600000>;
+				regulator-allowed-modes = <0 2>;
+				regulator-always-on;
+			};
+			mt_pmic_vtp_ldo_reg: ldo2 {
+				regulator-compatible = "LDO2";
+				regulator-name = "vtp";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3600000>;
+				regulator-allowed-modes = <0 2>;
+			};
+		};
+	};
+};
+
 
 &spi0 {
 	pinctrl-names = "default";
