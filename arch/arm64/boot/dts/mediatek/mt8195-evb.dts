@@ -142,6 +142,7 @@
 	status = "okay";
 };
 
+/*
 &disp_dpi1 {
 	port {
 		dpi1_out: endpoint@0 {
@@ -149,6 +150,7 @@
 		};
 	};
 };
+*/
 
 &dp_intf0 {
 	status = "okay";
@@ -215,6 +217,7 @@
 	pinctrl-0 = <&disp_pwm0_pin_default>;
 };
 
+/*
 &hdmi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&hdmi_pin>;
@@ -229,6 +232,7 @@
 		};
 	};
 };
+*/
 
 &mmc0 {
 	/* Note: fixup for bad compatible on mt8195.dtsi */
