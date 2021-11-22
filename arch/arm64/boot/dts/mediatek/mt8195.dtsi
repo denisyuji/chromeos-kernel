@@ -2684,6 +2684,29 @@
 				 <&gce0 SUBSYS_1c01XXXX 0x4000 0x1000>;
 		};
 
+		dp_intf0: dp_intf0@1c015000 {
+			status = "disabled";
+			compatible = "mediatek,mt8195-dpintf";
+			reg = <0 0x1c015000 0 0x1000>;
+			interrupts = <GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&vdosys0  CLK_VDO0_DP_INTF0>,
+				<&vdosys0 CLK_VDO0_DP_INTF0_DP_INTF>,
+				<&topckgen CLK_TOP_EDP>,
+				<&apmixedsys CLK_APMIXED_TVDPLL1>,
+				<&topckgen CLK_TOP_TVDPLL1_D2>,
+				<&topckgen CLK_TOP_TVDPLL1_D4>,
+				<&topckgen CLK_TOP_TVDPLL1_D8>,
+				<&topckgen CLK_TOP_TVDPLL1_D16>;
+			clock-names = "engine",
+				      "ck_cg",
+				      "pixel",
+				      "pll",
+				      "TVDPLL_D2",
+				      "TVDPLL_D4",
+				      "TVDPLL_D8",
+				      "TVDPLL_D16";
+		};
+
 		mutex: disp_mutex0@1c016000 {
 			compatible = "mediatek,mt8195-disp-mutex";
 			reg = <0 0x1c016000 0 0x1000>;
@@ -2919,6 +2942,30 @@
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE4_DL_ASYNC>;
 		};
 
+		dp_intf1: dp_intf1@1c113000 {
+			compatible = "mediatek,mt8195-dpintf";
+			reg = <0 0x1c113000 0 0x1000>;
+			interrupts = <GIC_SPI 513 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
+			clocks = <&vdosys1 CLK_VDO1_DP_INTF0_MM>,
+				 <&vdosys1 CLK_VDO1_DPINTF>,
+				 <&topckgen CLK_TOP_DP>,
+				 <&apmixedsys CLK_APMIXED_TVDPLL2>,
+				 <&topckgen CLK_TOP_TVDPLL2_D2>,
+				 <&topckgen CLK_TOP_TVDPLL2_D4>,
+				 <&topckgen CLK_TOP_TVDPLL2_D8>,
+				 <&topckgen CLK_TOP_TVDPLL2_D16>;
+			clock-names = "engine",
+				      "ck_cg",
+				      "pixel",
+				      "pll",
+				      "TVDPLL_D2",
+				      "TVDPLL_D4",
+				      "TVDPLL_D8",
+				      "TVDPLL_D16";
+			status = "disabled";
+		};
+
 		ethdr0: disp_ethdr@1c114000 {
 			compatible = "mediatek,mt8195-disp-ethdr";
 			reg = <0 0x1c114000 0 0x1000>,
@@ -2987,6 +3034,26 @@
 				 <&vppsys0 CLK_VPP0_GALS_VDO0_VDO1_VENCSYS_CORE1>;
 			clock-names = "apb", "smi", "gals";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
+		};
+
+		edp_tx: edp_tx@1c500000 {
+			compatible = "mediatek,mt8195-dp-tx";
+			reg = <0 0x1c500000 0 0x8000>;
+			nvmem-cells = <&dp_calibration>;
+			nvmem-cell-names = "dp_calibration_data";
+			power-domains = <&spm MT8195_POWER_DOMAIN_EPD_TX>;
+			interrupts = <GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH 0>;
+			status = "disabled";
+		};
+
+		dp_tx: dp_tx@1c600000 {
+			compatible = "mediatek,mt8195-dp-tx";
+			reg = <0 0x1c600000 0 0x8000>;
+			nvmem-cells = <&dp_calibration>;
+			nvmem-cell-names = "dp_calibration_data";
+			power-domains = <&spm MT8195_POWER_DOMAIN_DP_TX>;
+			interrupts = <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH 0>;
+			status = "disabled";
 		};
 	};
 };
