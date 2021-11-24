@@ -1633,6 +1633,7 @@
 			compatible = "mediatek,mt8195-smi-common-vpp";
 			mediatek,common-id = <1>;
 			reg = <0 0x14012000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1401XXXX 0x2000 0x1000>;
 			clocks = <&vppsys0 CLK_VPP0_SMI_COMMON_LARB4>,
 				 <&vppsys0 CLK_VPP0_SMI_COMMON_LARB4>,
 				 <&vppsys0 CLK_VPP0_GALS_EMI0_EMI1>,
@@ -1644,6 +1645,7 @@
 		larb4: larb@14013000 {
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x14013000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1401XXXX 0x3000 0x1000>;
 			mediatek,larb-id = <4>;
 			mediatek,smi = <&smi_sub_common_vpp0_vpp1_2x1>;
 			clocks = <&vppsys0 CLK_VPP0_GALS_VPP1_WPE>,
@@ -1655,6 +1657,7 @@
 		iommu_vpp: iommu@14018000 {
 			compatible = "mediatek,mt8195-iommu-vpp";
 			reg = <0 0x14018000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_1401XXXX 0x8000 0x1000>;
 			mediatek,larbs = <&larb1 &larb3 &larb4 &larb6 &larb8
 					  &larb12 &larb14 &larb16 &larb18
 					  &larb20 &larb22 &larb23 &larb26
@@ -1729,6 +1732,7 @@
 		larb5: larb@14f02000 {
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x14f02000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_14f0XXXX 0x2000 0x1000>;
 			mediatek,larb-id = <5>;
 			mediatek,smi = <&smi_common_vdo>;
 			clocks = <&vppsys1 CLK_VPP1_VPPSYS1_LARB>,
@@ -1741,6 +1745,7 @@
 		larb6: larb@14f03000 {
 			compatible = "mediatek,mt8195-smi-larb";
 			reg = <0 0x14f03000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce0 SUBSYS_14f0XXXX 0x3000 0x1000>;
 			mediatek,larb-id = <6>;
 			mediatek,smi = <&smi_sub_common_vpp0_vpp1_2x1>;
 			clocks = <&vppsys0 CLK_VPP0_GALS_VPP1_WPE>,
@@ -2643,7 +2648,7 @@
 			clocks = <&vdosys0 CLK_VDO0_DISP_OVL0>;
 			iommus = <&iommu_vdo M4U_PORT_L0_DISP_OVL0_RDMA0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x0000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x0000 0x1000>;
 		};
 
 		rdma0: disp_rdma@1c002000 {
@@ -2654,7 +2659,7 @@
 			clocks = <&vdosys0 CLK_VDO0_DISP_RDMA0>;
 			iommus = <&iommu_vdo M4U_PORT_L0_DISP_RDMA0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x2000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x2000 0x1000>;
 		};
 
 		color0: disp_color@1c003000 {
@@ -2665,7 +2670,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_COLOR0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x3000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x3000 0x1000>;
 		};
 
 		ccorr0: disp_ccorr@1c004000 {
@@ -2676,7 +2681,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_CCORR0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x4000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x4000 0x1000>;
 		};
 
 		aal0: disp_aal@1c005000 {
@@ -2687,7 +2692,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_AAL0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x5000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x5000 0x1000>;
 		};
 
 		gamma0: disp_gamma@1c006000 {
@@ -2698,7 +2703,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_GAMMA0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x6000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x6000 0x1000>;
 		};
 
 		dither0: disp_dither@1c007000 {
@@ -2709,7 +2714,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_DITHER0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x7000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x7000 0x1000>;
 		};
 
 		dsc0: disp_dsc_wrap@1c009000 {
@@ -2719,7 +2724,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DSC_WRAP0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c00XXXX 0x9000 0x1000>;
+				 <&gce1 SUBSYS_1c00XXXX 0x9000 0x1000>;
 		};
 
 		merge0: disp_vpp_merge0@1c014000 {
@@ -2729,7 +2734,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_VPP_MERGE0>;
 			mediatek,gce-client-reg =
-				 <&gce0 SUBSYS_1c01XXXX 0x4000 0x1000>;
+				 <&gce1 SUBSYS_1c01XXXX 0x4000 0x1000>;
 		};
 
 		dp_intf0: dp_intf0@1c015000 {
@@ -2763,6 +2768,8 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
 			clocks = <&vdosys0 CLK_VDO0_DISP_MUTEX0>;
 			clock-names = "vdo0_mutex";
+		//	mediatek,gce-client-reg =
+		//		 <&gce1 SUBSYS_1c01XXXX 0x6000 0x1000>;
 			mediatek,gce-events =
 				 <CMDQ_EVENT_VDO0_DISP_STREAM_DONE_0>;
 		};
@@ -2770,7 +2777,7 @@
 		vdosys0: syscon@1c01a000 {
 			compatible = "mediatek,mt8195-vdosys0", "syscon";
 			reg = <0 0x1c01a000 0 0x1000>;
-			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
+			mboxes = <&gce1 0 CMDQ_THR_PRIO_4>;
 			#clock-cells = <1>;
 		};
 
@@ -2828,13 +2835,13 @@
 		vdosys1: syscon@1c100000 {
 			compatible = "mediatek,mt8195-vdosys1", "syscon";
 			reg = <0 0x1c100000 0 0x1000>;
-			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x0000 0x1000>;
+			mboxes = <&gce1 1 CMDQ_THR_PRIO_4>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x0000 0x1000>;
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 		};
 
-		mutex1: disp_mutex0@1c101000 {
+		mutex1: disp_mutex1@1c101000 {
 			compatible = "mediatek,mt8195-disp-mutex";
 			reg = <0 0x1c101000 0 0x1000>;
 			reg-names = "vdo1_mutex";
@@ -2842,6 +2849,7 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			clocks = <&vdosys1 CLK_VDO1_DISP_MUTEX>;
 			clock-names = "vdo1_mutex";
+		//	mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x1000 0x1000>;
 			mediatek,gce-events = <CMDQ_EVENT_VDO1_STREAM_DONE_ENG_0>;
 		};
 
@@ -2852,7 +2860,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA0>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vdo M4U_PORT_L2_MDP_RDMA0>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x4000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x4000 0x1000>;
 		};
 
 		vdo1_rdma1: vdo1_rdma@1c105000 {
@@ -2862,7 +2870,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA1>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vpp M4U_PORT_L3_MDP_RDMA1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x5000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x5000 0x1000>;
 		};
 
 		vdo1_rdma2: vdo1_rdma@1c106000 {
@@ -2872,7 +2880,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA2>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vdo M4U_PORT_L2_MDP_RDMA2>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x6000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x6000 0x1000>;
 		};
 
 		vdo1_rdma3: vdo1_rdma@1c107000 {
@@ -2882,7 +2890,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA3>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vpp M4U_PORT_L3_MDP_RDMA3>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x7000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x7000 0x1000>;
 		};
 
 		vdo1_rdma4: vdo1_rdma@1c108000 {
@@ -2892,7 +2900,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA4>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vdo M4U_PORT_L2_MDP_RDMA4>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x8000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x8000 0x1000>;
 		};
 
 		vdo1_rdma5: vdo1_rdma@1c109000 {
@@ -2902,7 +2910,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA5>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vpp M4U_PORT_L3_MDP_RDMA5>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x9000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0x9000 0x1000>;
 		};
 
 		vdo1_rdma6: vdo1_rdma@1c10a000 {
@@ -2912,7 +2920,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA6>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vdo M4U_PORT_L2_MDP_RDMA6>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xa000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xa000 0x1000>;
 		};
 
 		vdo1_rdma7: vdo1_rdma@1c10b000 {
@@ -2922,7 +2930,7 @@
 			clocks = <&vdosys1 CLK_VDO1_MDP_RDMA7>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			iommus = <&iommu_vpp M4U_PORT_L3_MDP_RDMA7>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xb000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xb000 0x1000>;
 		};
 
 		merge1: disp_vpp_merge@1c10c000 {
@@ -2933,7 +2941,7 @@
 				 <&vdosys1 CLK_VDO1_MERGE0_DL_ASYNC>;
 			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xc000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xc000 0x1000>;
 			mediatek,merge-mute = <1>;
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE0_DL_ASYNC>;
 		};
@@ -2946,7 +2954,7 @@
 				 <&vdosys1 CLK_VDO1_MERGE1_DL_ASYNC>;
 			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xd000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xd000 0x1000>;
 			mediatek,merge-mute = <1>;
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE1_DL_ASYNC>;
 		};
@@ -2959,7 +2967,7 @@
 				 <&vdosys1 CLK_VDO1_MERGE2_DL_ASYNC>;
 			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xe000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xe000 0x1000>;
 			mediatek,merge-mute = <1>;
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE2_DL_ASYNC>;
 		};
@@ -2972,7 +2980,7 @@
 				 <&vdosys1 CLK_VDO1_MERGE3_DL_ASYNC>;
 			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xf000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c10XXXX 0xf000 0x1000>;
 			mediatek,merge-mute = <1>;
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE3_DL_ASYNC>;
 		};
@@ -2985,7 +2993,7 @@
 				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>;
 			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x0000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c11XXXX 0x0000 0x1000>;
 			mediatek,merge-fifo-en = <1>;
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE4_DL_ASYNC>;
 		};
@@ -3025,13 +3033,13 @@
 			      <0 0x1c11C000 0 0x1000>;
 			reg-names = "mixer", "vdo_fe0", "vdo_fe1", "gfx_fe0", "gfx_fe1",
 				    "vdo_be", "adl_ds";
-			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x4000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0x5000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0x7000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0x9000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0xA000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0xB000 0x1000>,
-						  <&gce0 SUBSYS_1c11XXXX 0xC000 0x1000>;
+			mediatek,gce-client-reg = <&gce1 SUBSYS_1c11XXXX 0x4000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0x5000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0x7000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0x9000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0xA000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0xB000 0x1000>,
+						  <&gce1 SUBSYS_1c11XXXX 0xC000 0x1000>;
 			clocks = <&vdosys1 CLK_VDO1_DISP_MIXER>,
 				 <&vdosys1 CLK_VDO1_HDR_VDO_FE0>,
 				 <&vdosys1 CLK_VDO1_HDR_VDO_FE1>,
