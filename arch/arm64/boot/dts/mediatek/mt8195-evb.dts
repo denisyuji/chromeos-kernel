@@ -1416,7 +1416,7 @@
                interrupts = <89 IRQ_TYPE_EDGE_BOTH>;
                realtek,jd-src = <1>;
                realtek,btndet-delay = <16>;
-               status = "disabled";
+               status = "okay"; /* rev2 */
 	};
 
 	rt5682s: rt5682s@1a {
@@ -1425,7 +1425,7 @@
                interrupt-parent = <&pio>;
                interrupts = <89 IRQ_TYPE_EDGE_BOTH>;
                realtek,jd-src = <1>;
-               status = "okay"; /*tomato-rev3*/
+               status = "disabled"; /*tomato-rev3*/
 	};
 	rt1011_l: rt1011@38 {
 		compatible = "realtek,rt1011";
