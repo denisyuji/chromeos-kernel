@@ -324,12 +324,12 @@ static int mtk_pcie_startup_port(struct mtk_gen3_pcie *pcie)
 
 	/* Check if the link is up or not */
 	err = readl_poll_timeout(pcie->base + PCIE_LINK_STATUS_REG, val,
-				 !!(val & PCIE_PORT_LINKUP), 20,
+				 !!(val & PCIE_PORT_LINKUP), 100,
 				 PCI_PM_D3COLD_WAIT * USEC_PER_MSEC);
 	if (err) {
 		val = readl_relaxed(pcie->base + PCIE_LTSSM_STATUS_REG);
 		dev_err(pcie->dev, "PCIe link down, ltssm reg val: %#x\n", val);
-		return err;
+		return -EPROBE_DEFER;
 	}
 
 	mtk_pcie_enable_msi(pcie);
