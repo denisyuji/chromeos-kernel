@@ -3095,6 +3095,8 @@
 		edp_tx: edp_tx@1c500000 {
 			compatible = "mediatek,mt8195-dp-tx";
 			reg = <0 0x1c500000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_EDP>;
+			clock-names = "faxi";
 			nvmem-cells = <&dp_calibration>;
 			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_EPD_TX>;
@@ -3105,6 +3107,8 @@
 		dp_tx: dp_tx@1c600000 {
 			compatible = "mediatek,mt8195-dp-tx";
 			reg = <0 0x1c600000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_DPTX_MCK>;
+			clock-names = "faxi";
 			nvmem-cells = <&dp_calibration>;
 			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_DP_TX>;
