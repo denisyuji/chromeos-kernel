@@ -433,7 +433,7 @@
 					};
 				};
 
-				power-domain@MT8195_POWER_DOMAIN_MFG0 {
+				mfg0: power-domain@MT8195_POWER_DOMAIN_MFG0 {
 					reg = <MT8195_POWER_DOMAIN_MFG0>;
 					#address-cells = <1>;
 					#size-cells = <0>;
