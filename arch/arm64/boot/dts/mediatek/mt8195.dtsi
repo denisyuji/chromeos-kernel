@@ -416,6 +416,7 @@
 					clocks = <&topckgen CLK_TOP_ADSP>,
 						 <&topckgen CLK_TOP_AUDIO_LOCAL_BUS>;
 					clock-names = "adsp", "bus";
+					mediatek,infracfg = <&infracfg_ao>;
 					#address-cells = <1>;
 					#size-cells = <0>;
 					#power-domain-cells = <1>;
