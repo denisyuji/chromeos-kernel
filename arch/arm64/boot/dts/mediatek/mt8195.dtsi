@@ -1471,6 +1471,15 @@
 			status = "disabled";
 		};
 
+		ufsphy: phy@11fa0000 {
+			compatible = "mediatek,mt8195-ufsphy", "mediatek,mt8183-ufsphy";
+			reg = <0 0x11fa0000 0 0xc000>;
+			clocks = <&clk26m>, <&clk26m>;
+			clock-names = "unipro", "mp";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
 		mfgcfg: syscon@13fbf000 {
 			compatible = "mediatek,mt8195-mfgcfg", "syscon";
 			reg = <0 0x13fbf000 0 0x1000>;
