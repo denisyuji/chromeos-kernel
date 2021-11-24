@@ -1237,8 +1237,8 @@
 			phy-names = "pcie-phy";
 			power-domains = <&spm MT8195_POWER_DOMAIN_PCIE_MAC_P1>;
 
-			//resets = <&infracfg_rst 0>;
-			//reset-names = "phy";
+			resets = <&infracfg_rst 0>;
+			reset-names = "phy";
 
 			#interrupt-cells = <1>;
 			interrupt-map-mask = <0 0 0 7>;
