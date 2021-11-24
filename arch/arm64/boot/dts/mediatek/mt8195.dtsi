@@ -3258,4 +3258,6 @@
 		mediatek,platform = <&afe>;
 		status = "disabled";
 	};
+
+	thermal_zones: thermal-zones { };
 };
