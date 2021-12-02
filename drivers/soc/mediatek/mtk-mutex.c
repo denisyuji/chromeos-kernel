@@ -193,6 +193,18 @@
 #define MT8195_MUTEX_EOF_DPI0			(MT8195_MUTEX_SOF_DPI0 << 7)
 #define MT8195_MUTEX_EOF_DPI1			(MT8195_MUTEX_SOF_DPI1 << 7)
 
+#define MT8183_MUTEX_MDP_START			5
+#define MT8183_MUTEX_MDP_MOD_MASK		0x07FFFFFF
+#define MT8183_MUTEX_MDP_SOF_MASK		0x00000007
+#define MT8183_MUTEX_MOD_MDP_RDMA0		BIT(2)
+#define MT8183_MUTEX_MOD_MDP_RSZ0		BIT(4)
+#define MT8183_MUTEX_MOD_MDP_RSZ1		BIT(5)
+#define MT8183_MUTEX_MOD_MDP_TDSHP0		BIT(6)
+#define MT8183_MUTEX_MOD_MDP_WROT0		BIT(7)
+#define MT8183_MUTEX_MOD_MDP_WDMA		BIT(8)
+#define MT8183_MUTEX_MOD_MDP_AAL0		BIT(23)
+#define MT8183_MUTEX_MOD_MDP_CCORR0		BIT(24)
+
 struct mtk_mutex {
 	int id;
 	bool claimed;
@@ -216,6 +228,10 @@ struct mtk_mutex_data {
 	const unsigned int *mutex_sof;
 	const unsigned int mutex_mod_reg;
 	const unsigned int mutex_sof_reg;
+	const unsigned int *mutex_mdp_offset;
+	const unsigned int *mutex_mdp_mod;
+	const unsigned int mutex_mdp_mod_mask;
+	const unsigned int mutex_mdp_sof_mask;
 	const bool no_clk;
 };
 
@@ -301,6 +317,17 @@ static const unsigned long mt8183_mutex_mod[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_RDMA0] = MT8183_MUTEX_MOD_DISP_RDMA0,
 	[DDP_COMPONENT_RDMA1] = MT8183_MUTEX_MOD_DISP_RDMA1,
 	[DDP_COMPONENT_WDMA0] = MT8183_MUTEX_MOD_DISP_WDMA0,
+};
+
+static const unsigned int mt8183_mutex_mdp_mod[MDP_MAX_COMP_COUNT] = {
+	[MDP_COMP_RDMA0] = MT8183_MUTEX_MOD_MDP_RDMA0,
+	[MDP_COMP_RSZ0] = MT8183_MUTEX_MOD_MDP_RSZ0,
+	[MDP_COMP_RSZ1] = MT8183_MUTEX_MOD_MDP_RSZ1,
+	[MDP_COMP_TDSHP0] = MT8183_MUTEX_MOD_MDP_TDSHP0,
+	[MDP_COMP_WROT0] = MT8183_MUTEX_MOD_MDP_WROT0,
+	[MDP_COMP_WDMA] = MT8183_MUTEX_MOD_MDP_WDMA,
+	[MDP_COMP_AAL0] = MT8183_MUTEX_MOD_MDP_AAL0,
+	[MDP_COMP_CCORR0] = MT8183_MUTEX_MOD_MDP_CCORR0,
 };
 
 static const unsigned long mt8192_mutex_mod[DDP_COMPONENT_ID_MAX] = {
@@ -398,6 +425,14 @@ static const unsigned int mt8195_mutex_sof[DDP_MUTEX_SOF_MAX] = {
 		MT8195_MUTEX_SOF_DP_INTF1 | MT8195_MUTEX_EOF_DP_INTF1,
 };
 
+/* indicate which mutex is used by each pipepline */
+static const unsigned int mt8183_mutex_mdp_offset[MDP_PIPE_MAX] = {
+	[MDP_PIPE_IMGI] = MT8183_MUTEX_MDP_START,
+	[MDP_PIPE_RDMA0] = MT8183_MUTEX_MDP_START + 1,
+	[MDP_PIPE_WPEI] = MT8183_MUTEX_MDP_START + 2,
+	[MDP_PIPE_WPEI2] = MT8183_MUTEX_MDP_START + 3
+};
+
 static const struct mtk_mutex_data mt2701_mutex_driver_data = {
 	.mutex_mod = mt2701_mutex_mod,
 	.mutex_sof = mt2712_mutex_sof,
@@ -432,6 +467,10 @@ static const struct mtk_mutex_data mt8183_mutex_driver_data = {
 	.mutex_sof = mt8183_mutex_sof,
 	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
+	.mutex_mdp_offset = mt8183_mutex_mdp_offset,
+	.mutex_mdp_mod = mt8183_mutex_mdp_mod,
+	.mutex_mdp_mod_mask = MT8183_MUTEX_MDP_MOD_MASK,
+	.mutex_mdp_sof_mask = MT8183_MUTEX_MDP_SOF_MASK,
 	.no_clk = true,
 };
 
@@ -463,6 +502,21 @@ struct mtk_mutex *mtk_mutex_get(struct device *dev)
 	return ERR_PTR(-EBUSY);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_get);
+
+struct mtk_mutex *mtk_mutex_mdp_get(struct device *dev,
+				    enum mtk_mdp_pipe_id id)
+{
+	struct mtk_mutex_ctx *mtx = dev_get_drvdata(dev);
+	int i = mtx->data->mutex_mdp_offset[id];
+
+	if (!mtx->mutex[i].claimed) {
+		mtx->mutex[i].claimed = true;
+		return &mtx->mutex[i];
+	}
+
+	return ERR_PTR(-EBUSY);
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_mdp_get);
 
 void mtk_mutex_put(struct mtk_mutex *mutex)
 {
@@ -590,6 +644,20 @@ void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 	}
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_remove_comp);
+
+u32 mtk_mutex_get_mdp_mod(struct mtk_mutex *mutex,enum mtk_mdp_comp_id id)
+{
+	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
+						 mutex[mutex->id]);
+
+	WARN_ON(&mtx->mutex[mutex->id] != mutex);
+
+	if (mtx->data->mutex_mdp_mod)
+		return mtx->data->mutex_mdp_mod[id];
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_get_mdp_mod);
 
 void mtk_mutex_enable(struct mtk_mutex *mutex)
 {
