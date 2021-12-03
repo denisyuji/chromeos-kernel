@@ -200,6 +200,8 @@ struct mtk_jpegdec_comp_dev {
 	struct mtk_jpeg_dev *master_dev;
 	struct mtk_jpegdec_pm pm;
 	int jpegdec_irq;
+	struct delayed_work job_timeout_work;
+	struct mtk_jpeg_hw_param hw_param;
 };
 
 /**

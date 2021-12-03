@@ -443,6 +443,24 @@ void mtk_jpeg_dec_set_config(void __iomem *base,
 	mtk_jpeg_dec_set_pause_mcu_idx(base, config->total_mcu);
 }
 
+static void mtk_jpegdec_timeout_work(struct work_struct *work)
+{
+	enum vb2_buffer_state buf_state = VB2_BUF_STATE_ERROR;
+	struct mtk_jpegdec_comp_dev *cjpeg =
+		container_of(work, struct mtk_jpegdec_comp_dev,
+		job_timeout_work.work);
+	struct vb2_v4l2_buffer *src_buf, *dst_buf;
+
+	src_buf = cjpeg->hw_param.src_buffer;
+	dst_buf = cjpeg->hw_param.dst_buffer;
+
+	mtk_jpeg_dec_reset(cjpeg->reg_base);
+	clk_disable_unprepare(cjpeg->pm.dec_clk.clk_info->jpegdec_clk);
+	pm_runtime_put(cjpeg->pm.dev);
+	v4l2_m2m_buf_done(src_buf, buf_state);
+	v4l2_m2m_buf_done(dst_buf, buf_state);
+}
+
 int mtk_jpegdec_init_pm(struct mtk_jpegdec_comp_dev *mtkdev)
 {
 	struct mtk_jpegdec_clk_info *clk_info;
@@ -506,6 +524,8 @@ static irqreturn_t mtk_jpegdec_hw_irq_handler(int irq, void *priv)
 
 	struct mtk_jpegdec_comp_dev *jpeg = priv;
 	struct mtk_jpeg_dev *master_jpeg = jpeg->master_dev;
+
+	cancel_delayed_work(&jpeg->job_timeout_work);
 
 	irq_status = mtk_jpeg_dec_get_int_status(jpeg->reg_base);
 	dec_irq_ret = mtk_jpeg_dec_enum_result(irq_status);
@@ -592,6 +612,9 @@ static int mtk_jpegdec_hw_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dev->plat_dev = pdev;
+
+	INIT_DELAYED_WORK(&dev->job_timeout_work, mtk_jpegdec_timeout_work);
+
 	ret = mtk_jpegdec_init_pm(dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to get jpeg enc clock source");
