@@ -202,6 +202,9 @@ struct mtk_jpegdec_comp_dev {
 	int jpegdec_irq;
 	struct delayed_work job_timeout_work;
 	struct mtk_jpeg_hw_param hw_param;
+	atomic_t hw_rdy;
+	enum mtk_jpeg_hw_state hw_state;
+	spinlock_t hw_lock;
 };
 
 /**
@@ -237,6 +240,8 @@ struct mtk_jpeg_dev {
 
 	void __iomem *reg_decbase[MTK_JPEGDEC_HW_MAX];
 	struct mtk_jpegdec_comp_dev *dec_hw_dev[MTK_JPEGDEC_HW_MAX];
+	wait_queue_head_t dec_hw_wq;
+	struct workqueue_struct	*dec_workqueue;
 };
 
 /**
