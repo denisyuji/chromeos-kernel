@@ -1556,7 +1556,7 @@
 				 <&iommu_vpp M4U_PORT_L4_MDP_WROT>;
 			#address-cells = <2>;
 			#size-cells = <2>;
-			dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
+			//dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
 			clocks = <&vppsys0 CLK_VPP0_MDP_RDMA>,
 					<&topckgen CLK_TOP_CFG_VPP0>,
 					<&topckgen CLK_TOP_CFG_26M_VPP0>,
