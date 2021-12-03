@@ -19,6 +19,10 @@ properties:
           - enum:
               - mediatek,mt8173-jpgdec
               - mediatek,mt2701-jpgdec
+              - mediatek,mt8195-jpgdec
+              - mediatek,mt8195-jpgdec0
+              - mediatek,mt8195-jpgdec1
+              - mediatek,mt8195-jpgdec2
       - items:
           - enum:
               - mediatek,mt7623-jpgdec
