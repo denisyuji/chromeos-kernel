@@ -1431,37 +1431,7 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 	spin_lock_init(&jpeg->hw_lock);
 	jpeg->dev = &pdev->dev;
 	jpeg->variant = of_device_get_match_data(jpeg->dev);
-	if (!jpeg->variant->is_encoder) {
-		INIT_DELAYED_WORK(&jpeg->job_timeout_work,
-				mtk_jpeg_job_timeout_work);
-
-		jpeg->reg_base = devm_platform_ioremap_resource(pdev, 0);
-		if (IS_ERR(jpeg->reg_base)) {
-			ret = PTR_ERR(jpeg->reg_base);
-			return ret;
-		}
-
-		jpeg_irq = platform_get_irq(pdev, 0);
-		if (jpeg_irq < 0)
-			return jpeg_irq;
-
-		ret = devm_request_irq(&pdev->dev, jpeg_irq,
-				       jpeg->variant->irq_handler, 0, pdev->name, jpeg);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to request jpeg_irq %d (%d)\n",
-				jpeg_irq, ret);
-			goto err_req_irq;
-		}
-
-		ret = devm_clk_bulk_get(jpeg->dev, jpeg->variant->num_clks,
-					jpeg->variant->clks);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to init clk, err %d\n", ret);
-			goto err_clk_init;
-		}
-
-		pm_runtime_enable(&pdev->dev);
-	} else {
+	if (jpeg->variant->is_encoder) {
 		init_waitqueue_head(&jpeg->enc_hw_wq);
 		jpeg->workqueue = alloc_ordered_workqueue(MTK_JPEG_NAME,
 			WQ_MEM_RECLAIM | WQ_FREEZABLE);
@@ -1516,13 +1486,11 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 		  jpeg->variant->dev_name, jpeg->vdev->num,
 		  VIDEO_MAJOR, jpeg->vdev->minor);
 
-	if (jpeg->variant->is_encoder) {
-		ret = of_platform_populate(pdev->dev.of_node, NULL, NULL,
-			&pdev->dev);
-		if (ret) {
-			v4l2_err(&jpeg->v4l2_dev, "Master of platform populate failed.");
-			goto err_vfd_jpeg_register;
-		}
+	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL,
+		&pdev->dev);
+	if (ret) {
+		v4l2_err(&jpeg->v4l2_dev, "Master of platform populate failed.");
+		goto err_vfd_jpeg_register;
 	}
 
 	platform_set_drvdata(pdev, jpeg);
@@ -1540,11 +1508,7 @@ err_m2m_init:
 
 err_dev_register:
 
-err_clk_init:
-
 err_alloc_workqueue:
-
-err_req_irq:
 
 	return ret;
 }
@@ -1650,6 +1614,20 @@ static const struct mtk_jpeg_variant mtk_jpegenc_drvdata = {
 	.cap_q_default_fourcc = V4L2_PIX_FMT_JPEG,
 };
 
+static const struct mtk_jpeg_variant mtk_jpegdec_drvdata = {
+	.is_encoder	= false,
+	.clks = mtk_jpeg_dec_clocks,
+	.num_clks = ARRAY_SIZE(mtk_jpeg_dec_clocks),
+	.formats = mtk_jpeg_dec_formats,
+	.num_formats = MTK_JPEG_DEC_NUM_FORMATS,
+	.qops = &mtk_jpeg_dec_qops,
+	.m2m_ops = &mtk_jpeg_dec_m2m_ops,
+	.dev_name = "mtk-jpeg-dec",
+	.ioctl_ops = &mtk_jpeg_dec_ioctl_ops,
+	.out_q_default_fourcc = V4L2_PIX_FMT_JPEG,
+	.cap_q_default_fourcc = V4L2_PIX_FMT_YUV420M,
+};
+
 #if defined(CONFIG_OF)
 static const struct of_device_id mtk_jpeg_match[] = {
 	{
@@ -1668,6 +1646,10 @@ static const struct of_device_id mtk_jpeg_match[] = {
 		.compatible = "mediatek,mt8195-jpgenc",
 		.data = &mtk_jpegenc_drvdata,
 	},
+	{
+		.compatible = "mediatek,mt8195-jpgdec",
+		.data = &mtk_jpegdec_drvdata,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mtk_jpeg_match);
@@ -1685,6 +1667,7 @@ static struct platform_driver mtk_jpeg_driver = {
 
 static struct platform_driver * const mtk_jpeg_source_drivers[] = {
 	&mtk_jpegenc_hw_driver,
+	&mtk_jpegdec_hw_driver,
 	&mtk_jpeg_driver,
 };
 static int __init mtk_jpeg_init(void)

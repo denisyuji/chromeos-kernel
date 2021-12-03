@@ -5,9 +5,24 @@
  *         Rick Chang <rick.chang@mediatek.com>
  */
 
+#include <linux/clk.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/pm_runtime.h>
+#include <linux/slab.h>
+#include <media/media-device.h>
 #include <media/videobuf2-core.h>
+#include <media/videobuf2-v4l2.h>
+#include <media/v4l2-mem2mem.h>
+#include <media/v4l2-dev.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-fh.h>
+#include <media/v4l2-event.h>
 
 #include "mtk_jpeg_core.h"
 #include "mtk_jpeg_dec_hw.h"
@@ -23,6 +38,25 @@ enum mtk_jpeg_color {
 	MTK_JPEG_COLOR_422VX2		= 0x00222121,
 	MTK_JPEG_COLOR_400		= 0x00110000
 };
+
+#if defined(CONFIG_OF)
+static const struct of_device_id mtk_jpegdec_hw_ids[] = {
+	{
+		.compatible = "mediatek,mt8195-jpgdec0",
+		.data = (void *)MTK_JPEGDEC_HW0,
+	},
+	{
+		.compatible = "mediatek,mt8195-jpgdec1",
+		.data = (void *)MTK_JPEGDEC_HW1,
+	},
+	{
+		.compatible = "mediatek,mt8195-jpgdec2",
+		.data = (void *)MTK_JPEGDEC_HW2,
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, mtk_jpegdec_hw_ids);
+#endif
 
 static inline int mtk_jpeg_verify_align(u32 val, int align, u32 reg)
 {
@@ -408,3 +442,201 @@ void mtk_jpeg_dec_set_config(void __iomem *base,
 				   config->dma_last_mcu);
 	mtk_jpeg_dec_set_pause_mcu_idx(base, config->total_mcu);
 }
+
+int mtk_jpegdec_init_pm(struct mtk_jpegdec_comp_dev *mtkdev)
+{
+	struct mtk_jpegdec_clk_info *clk_info;
+	struct mtk_jpegdec_clk *jpegdec_clk;
+	struct platform_device *pdev;
+	struct mtk_jpegdec_pm *pm;
+	int i, ret;
+
+	pdev = mtkdev->plat_dev;
+	pm = &mtkdev->pm;
+	pm->dev = &pdev->dev;
+	pm->mtkdev = mtkdev;
+	jpegdec_clk = &pm->dec_clk;
+	jpegdec_clk->clk_num =
+		of_property_count_strings(pdev->dev.of_node, "clock-names");
+	if (!jpegdec_clk->clk_num) {
+		dev_err(&pdev->dev, "Failed to get jpegenc clock count\n");
+		return -EINVAL;
+	}
+
+	jpegdec_clk->clk_info = devm_kcalloc(&pdev->dev,
+		jpegdec_clk->clk_num,
+		sizeof(*clk_info),
+		GFP_KERNEL);
+	if (!jpegdec_clk->clk_info)
+		return -ENOMEM;
+
+	for (i = 0; i < jpegdec_clk->clk_num; i++) {
+		clk_info = &jpegdec_clk->clk_info[i];
+		ret = of_property_read_string_index(pdev->dev.of_node,
+			"clock-names", i,
+			&clk_info->clk_name);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to get jpegenc clock name\n");
+			return ret;
+		}
+
+		clk_info->jpegdec_clk = devm_clk_get(&pdev->dev,
+			clk_info->clk_name);
+		if (IS_ERR(clk_info->jpegdec_clk)) {
+			dev_err(&pdev->dev, "devm_clk_get (%d)%s fail",
+				i, clk_info->clk_name);
+			return PTR_ERR(clk_info->jpegdec_clk);
+		}
+	}
+
+	pm_runtime_enable(&pdev->dev);
+
+	return ret;
+}
+
+static irqreturn_t mtk_jpegdec_hw_irq_handler(int irq, void *priv)
+{
+	struct vb2_v4l2_buffer *src_buf, *dst_buf;
+	struct mtk_jpeg_src_buf *jpeg_src_buf;
+	enum vb2_buffer_state buf_state;
+	struct mtk_jpeg_ctx *ctx;
+	u32 dec_irq_ret;
+	u32 irq_status;
+	int i;
+
+	struct mtk_jpegdec_comp_dev *jpeg = priv;
+	struct mtk_jpeg_dev *master_jpeg = jpeg->master_dev;
+
+	irq_status = mtk_jpeg_dec_get_int_status(jpeg->reg_base);
+	dec_irq_ret = mtk_jpeg_dec_enum_result(irq_status);
+	if (dec_irq_ret >= MTK_JPEG_DEC_RESULT_UNDERFLOW)
+		mtk_jpeg_dec_reset(jpeg->reg_base);
+	if (dec_irq_ret != MTK_JPEG_DEC_RESULT_EOF_DONE) {
+		dev_err(jpeg->dev, "decode failed\n");
+		goto dec_end;
+	}
+
+	ctx = v4l2_m2m_get_curr_priv(master_jpeg->m2m_dev);
+	if (!ctx) {
+		dev_err(jpeg->dev, "Context is NULL\n");
+		return IRQ_HANDLED;
+		}
+
+	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
+	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+	jpeg_src_buf =
+		container_of(src_buf, struct mtk_jpeg_src_buf, b);
+
+	for (i = 0; i < dst_buf->vb2_buf.num_planes; i++)
+		vb2_set_plane_payload(&dst_buf->vb2_buf, i,
+		jpeg_src_buf->dec_param.comp_size[i]);
+
+	buf_state = VB2_BUF_STATE_DONE;
+
+dec_end:
+	v4l2_m2m_buf_done(src_buf, buf_state);
+	v4l2_m2m_buf_done(dst_buf, buf_state);
+	v4l2_m2m_job_finish(master_jpeg->m2m_dev, ctx->fh.m2m_ctx);
+	pm_runtime_put(ctx->jpeg->dev);
+
+	return IRQ_HANDLED;
+}
+
+static int mtk_jpegdec_hw_init_irq(struct mtk_jpegdec_comp_dev *dev)
+{
+	struct platform_device *pdev = dev->plat_dev;
+	int ret;
+
+	dev->jpegdec_irq = platform_get_irq(pdev, 0);
+	if (dev->jpegdec_irq < 0) {
+		dev_err(&pdev->dev, "Failed to get irq resource");
+		return dev->jpegdec_irq;
+	}
+
+	ret = devm_request_irq(&pdev->dev, dev->jpegdec_irq,
+		mtk_jpegdec_hw_irq_handler, 0, pdev->name, dev);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to devm_request_irq %d (%d)",
+			dev->jpegdec_irq, ret);
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
+void mtk_jpegdec_release_pm(struct mtk_jpegdec_comp_dev *mtkdev)
+{
+	struct platform_device *pdev = mtkdev->plat_dev;
+
+	pm_runtime_disable(&pdev->dev);
+}
+
+static int mtk_jpegdec_hw_probe(struct platform_device *pdev)
+{
+	struct mtk_jpeg_dev *master_dev;
+	struct mtk_jpegdec_comp_dev *dev;
+	const struct of_device_id *of_id;
+	int ret, comp_idx;
+
+	struct device *decs = &pdev->dev;
+
+	if (!decs->parent)
+		return -EPROBE_DEFER;
+
+	master_dev = dev_get_drvdata(decs->parent);
+	if (!master_dev)
+		return -EPROBE_DEFER;
+
+	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
+	if (!dev)
+		return -ENOMEM;
+
+	dev->plat_dev = pdev;
+	ret = mtk_jpegdec_init_pm(dev);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to get jpeg enc clock source");
+		return ret;
+	}
+
+	dev->reg_base =
+		devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(dev->reg_base)) {
+		ret = PTR_ERR(dev->reg_base);
+		goto err;
+	}
+
+	ret = mtk_jpegdec_hw_init_irq(dev);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register JPEGDEC irq handler.\n");
+		goto err;
+	}
+
+	of_id = of_match_device(mtk_jpegdec_hw_ids, decs);
+	if (!of_id) {
+		dev_err(&pdev->dev, "Can't get vdec comp device id.\n");
+		ret = -EINVAL;
+		goto err;
+	}
+
+	comp_idx = (enum mtk_jpegdec_hw_id)of_id->data;
+	if (comp_idx < MTK_JPEGDEC_HW_MAX) {
+		master_dev->dec_hw_dev[comp_idx] = dev;
+		master_dev->reg_decbase[comp_idx] = dev->reg_base;
+		dev->master_dev = master_dev;
+	}
+
+	platform_set_drvdata(pdev, dev);
+	return 0;
+
+err:
+	mtk_jpegdec_release_pm(dev);
+	return ret;
+}
+
+struct platform_driver mtk_jpegdec_hw_driver = {
+	.probe	= mtk_jpegdec_hw_probe,
+	.driver	= {
+		.name	= "mtk-jpegdec-hw",
+		.of_match_table = mtk_jpegdec_hw_ids,
+	},
+};

@@ -102,6 +102,13 @@ enum mtk_jpegenc_hw_id {
 	MTK_JPEGENC_HW_MAX,
 };
 
+enum mtk_jpegdec_hw_id {
+	MTK_JPEGDEC_HW0,
+	MTK_JPEGDEC_HW1,
+	MTK_JPEGDEC_HW2,
+	MTK_JPEGDEC_HW_MAX,
+};
+
 /**
  * struct mtk_jpegenc_clk_info - Structure used to store clock name
  */
@@ -151,6 +158,51 @@ struct mtk_jpegenc_comp_dev {
 };
 
 /**
+ * struct mtk_jpegdec_clk_info - Structure used to store clock name
+ */
+struct mtk_jpegdec_clk_info {
+	const char	*clk_name;
+	struct clk
+	*jpegdec_clk;
+};
+
+/**
+ * struct mtk_jpegdec_clk - Structure used to
+ * store vcodec clock information
+ */
+struct mtk_jpegdec_clk {
+	struct mtk_jpegdec_clk_info	*clk_info;
+	int	clk_num;
+};
+
+/**
+ * struct mtk_jpegdec_pm - Power management data structure
+ */
+struct mtk_jpegdec_pm {
+	struct mtk_jpegdec_clk	dec_clk;
+	struct device	*dev;
+	struct mtk_jpegdec_comp_dev	*mtkdev;
+};
+
+/**
+ * struct mtk_jpegdec_comp_dev - JPEG COREX abstraction
+ * @dev:		        JPEG device
+ * @plat_dev:		    platform device data
+ * @reg_base:		    JPEG registers mapping
+ * @master_dev:		    mtk_jpeg_dev device
+ * @pm:	                mtk_jpegdec_pm
+ * @jpegdec_irq:	    jpeg decode irq num
+ */
+struct mtk_jpegdec_comp_dev {
+	struct device *dev;
+	struct platform_device *plat_dev;
+	void __iomem *reg_base;
+	struct mtk_jpeg_dev *master_dev;
+	struct mtk_jpegdec_pm pm;
+	int jpegdec_irq;
+};
+
+/**
  * struct mtk_jpeg_dev - JPEG IP abstraction
  * @lock:		the mutex protecting this structure
  * @hw_lock:		spinlock protecting the hw device resource
@@ -180,6 +232,9 @@ struct mtk_jpeg_dev {
 	void __iomem *reg_encbase[MTK_JPEGENC_HW_MAX];
 	struct mtk_jpegenc_comp_dev *enc_hw_dev[MTK_JPEGENC_HW_MAX];
 	wait_queue_head_t enc_hw_wq;
+
+	void __iomem *reg_decbase[MTK_JPEGDEC_HW_MAX];
+	struct mtk_jpegdec_comp_dev *dec_hw_dev[MTK_JPEGDEC_HW_MAX];
 };
 
 /**
@@ -246,5 +301,6 @@ struct mtk_jpeg_ctx {
 };
 
 extern struct platform_driver mtk_jpegenc_hw_driver;
+extern struct platform_driver mtk_jpegdec_hw_driver;
 
 #endif /* _MTK_JPEG_CORE_H */
