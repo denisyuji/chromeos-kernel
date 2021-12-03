@@ -105,15 +105,6 @@ static struct mtk_jpeg_fmt mtk_jpeg_dec_formats[] = {
 #define MTK_JPEG_ENC_NUM_FORMATS ARRAY_SIZE(mtk_jpeg_enc_formats)
 #define MTK_JPEG_DEC_NUM_FORMATS ARRAY_SIZE(mtk_jpeg_dec_formats)
 
-struct mtk_jpeg_src_buf {
-	struct vb2_v4l2_buffer b;
-	struct list_head list;
-	struct mtk_jpeg_dec_param dec_param;
-
-	struct mtk_jpeg_ctx *curr_ctx;
-	u32 frame_num;
-};
-
 static int debug;
 module_param(debug, int, 0644);
 
@@ -1338,6 +1329,7 @@ static int mtk_jpeg_open(struct file *file)
 	if (jpeg->variant->is_encoder)
 		INIT_WORK(&ctx->jpeg_work, mtk_jpegenc_worker);
 
+	INIT_LIST_HEAD(&ctx->dst_done_queue);
 	v4l2_fh_init(&ctx->fh, vfd);
 	file->private_data = &ctx->fh;
 	v4l2_fh_add(&ctx->fh);

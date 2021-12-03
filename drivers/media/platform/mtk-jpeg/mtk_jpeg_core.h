@@ -13,10 +13,11 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-fh.h>
+#include <media/videobuf2-v4l2.h>
+
+#include "mtk_jpeg_dec_hw.h"
 
 #define MTK_JPEG_NAME		"mtk-jpeg"
-
-#define MTK_JPEG_COMP_MAX		3
 
 #define MTK_JPEG_FMT_FLAG_OUTPUT	BIT(0)
 #define MTK_JPEG_FMT_FLAG_CAPTURE	BIT(1)
@@ -73,6 +74,15 @@ struct mtk_jpeg_variant {
 	const struct v4l2_ioctl_ops *ioctl_ops;
 	u32 out_q_default_fourcc;
 	u32 cap_q_default_fourcc;
+};
+
+struct mtk_jpeg_src_buf {
+	struct vb2_v4l2_buffer b;
+	struct list_head list;
+	struct mtk_jpeg_dec_param dec_param;
+
+	struct mtk_jpeg_ctx *curr_ctx;
+	u32 frame_num;
 };
 
 enum mtk_jpeg_hw_state {
@@ -230,6 +240,9 @@ struct mtk_jpeg_ctx {
 	struct v4l2_ctrl_handler ctrl_hdl;
 	struct work_struct jpeg_work;
 	u32 total_frame_num;
+	struct list_head dst_done_queue;
+	spinlock_t done_queue_lock;
+	u32 last_done_frame_num;
 };
 
 extern struct platform_driver mtk_jpegenc_hw_driver;
