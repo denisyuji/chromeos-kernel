@@ -183,6 +183,24 @@ void mtk_jpeg_set_enc_params(struct mtk_jpeg_ctx *ctx,  void __iomem *base)
 	writel(ctx->restart_interval, base + JPEG_ENC_RST_MCU_NUM);
 }
 
+static void mtk_jpegenc_timeout_work(struct work_struct *work)
+{
+	struct delayed_work *Pwork =
+		container_of(work, struct delayed_work, work);
+	struct mtk_jpegenc_comp_dev *cjpeg =
+		container_of(Pwork, struct mtk_jpegenc_comp_dev,
+		job_timeout_work);
+	enum vb2_buffer_state buf_state = VB2_BUF_STATE_ERROR;
+	struct vb2_v4l2_buffer *src_buf;
+
+	src_buf = cjpeg->hw_param.src_buffer;
+
+	mtk_jpeg_enc_reset(cjpeg->reg_base);
+	clk_disable_unprepare(cjpeg->pm.venc_clk.clk_info->jpegenc_clk);
+	pm_runtime_put(cjpeg->pm.dev);
+	v4l2_m2m_buf_done(src_buf, buf_state);
+}
+
 static irqreturn_t mtk_jpegenc_hw_irq_handler(int irq, void *priv)
 {
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
@@ -193,6 +211,8 @@ static irqreturn_t mtk_jpegenc_hw_irq_handler(int irq, void *priv)
 
 	struct mtk_jpegenc_comp_dev *jpeg = priv;
 	struct mtk_jpeg_dev *master_jpeg = jpeg->master_dev;
+
+	cancel_delayed_work(&jpeg->job_timeout_work);
 
 	irq_status = readl(jpeg->reg_base + JPEG_ENC_INT_STS) &
 		JPEG_ENC_INT_STATUS_MASK_ALLIRQ;
@@ -321,6 +341,9 @@ static int mtk_jpegenc_hw_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dev->plat_dev = pdev;
+
+	INIT_DELAYED_WORK(&dev->job_timeout_work,
+		mtk_jpegenc_timeout_work);
 
 	ret = mtk_jpegenc_init_pm(dev);
 	if (ret) {
