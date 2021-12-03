@@ -60,6 +60,7 @@ enum mtk_jpeg_ctx_state {
  * @cap_q_default_fourcc:	capture queue default fourcc
  */
 struct mtk_jpeg_variant {
+	bool is_encoder;
 	struct clk_bulk_data *clks;
 	int num_clks;
 	struct mtk_jpeg_fmt *formats;
@@ -72,6 +73,55 @@ struct mtk_jpeg_variant {
 	const struct v4l2_ioctl_ops *ioctl_ops;
 	u32 out_q_default_fourcc;
 	u32 cap_q_default_fourcc;
+};
+
+enum mtk_jpegenc_hw_id {
+	MTK_JPEGENC_HW0,
+	MTK_JPEGENC_HW1,
+	MTK_JPEGENC_HW_MAX,
+};
+
+/**
+ * struct mtk_jpegenc_clk_info - Structure used to store clock name
+ */
+struct mtk_jpegenc_clk_info {
+	const char	*clk_name;
+	struct clk	*jpegenc_clk;
+};
+
+/**
+ * struct mtk_vcodec_clk - Structure used to store vcodec clock information
+ */
+struct mtk_jpegenc_clk {
+	struct mtk_jpegenc_clk_info	*clk_info;
+	int	clk_num;
+};
+
+/**
+ * struct mtk_vcodec_pm - Power management data structure
+ */
+struct mtk_jpegenc_pm {
+	struct mtk_jpegenc_clk	venc_clk;
+	struct device	*dev;
+	struct mtk_jpegenc_comp_dev	*mtkdev;
+};
+
+/**
+ * struct mtk_jpegenc_comp_dev - JPEG COREX abstraction
+ * @dev:		        JPEG device
+ * @plat_dev:		    platform device data
+ * @reg_base:		    JPEG registers mapping
+ * @master_dev:		    mtk_jpeg_dev device
+ * @pm:	                mtk_jpegenc_pm
+ * @jpegenc_irq:	    jpeg encode irq num
+ */
+struct mtk_jpegenc_comp_dev {
+	struct device		*dev;
+	struct platform_device *plat_dev;
+	void __iomem		*reg_base;
+	struct mtk_jpeg_dev *master_dev;
+	struct mtk_jpegenc_pm pm;
+	int jpegenc_irq;
 };
 
 /**
@@ -100,6 +150,9 @@ struct mtk_jpeg_dev {
 	void __iomem		*reg_base;
 	struct delayed_work job_timeout_work;
 	const struct mtk_jpeg_variant *variant;
+
+	void __iomem *reg_encbase[MTK_JPEGENC_HW_MAX];
+	struct mtk_jpegenc_comp_dev *enc_hw_dev[MTK_JPEGENC_HW_MAX];
 };
 
 /**
@@ -159,5 +212,7 @@ struct mtk_jpeg_ctx {
 	u8 restart_interval;
 	struct v4l2_ctrl_handler ctrl_hdl;
 };
+
+extern struct platform_driver mtk_jpegenc_hw_driver;
 
 #endif /* _MTK_JPEG_CORE_H */
