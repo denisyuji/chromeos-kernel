@@ -322,6 +322,7 @@ static int ovl_adaptor_comp_init(struct device *dev, struct component_match **ma
 	struct mtk_disp_ovl_adaptor *priv = dev_get_drvdata(dev);
 	struct device_node *node, *parent;
 	struct platform_device *comp_pdev;
+	int ret = -ENODEV;
 
 	parent = dev->parent->parent->of_node->parent;
 
@@ -356,9 +357,10 @@ static int ovl_adaptor_comp_init(struct device *dev, struct component_match **ma
 
 		drm_of_component_match_add(dev, match, compare_of, node);
 		dev_dbg(dev, "Adding component match for %pOF\n", node);
+		ret = 0;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int mtk_disp_ovl_adaptor_comp_bind(struct device *dev, struct device *master,
