@@ -61,7 +61,7 @@
 		};
 	};
 
-	panel_fixed_3v3: regulator@0 {
+	panel_fixed_3v3: regulator0 {
 		compatible = "regulator-fixed";
 		regulator-name = "PANEL_3V3";
 		regulator-min-microvolt = <3300000>;
@@ -77,12 +77,12 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-		scp_mem_reserved: scp_mem_region {
+		scp_mem_reserved: scp_mem_region@50000000 {
 			compatible = "shared-dma-pool";
 			reg = <0 0x50000000 0 0x2900000>;
 			no-map;
 		};
-		dfd-buffer{
+		dfd-buffer@6a000000 {
 			compatible = "mediatek,dfd-buffer";
 			reg = <0 0x6A000000 0 0x100000>;
 			no-map;
@@ -198,7 +198,7 @@
                                                 125000 161>;
 	};
 
-	usb_vbus: regulator@2 {
+	usb_vbus: regulator1 {
 		compatible = "regulator-fixed";
 		regulator-name = "usb-vbus";
 		regulator-min-microvolt = <5000000>;
@@ -920,7 +920,7 @@
 			output-low;
 		};
 	};
-	spi_pins_0: spi0@0 {
+	spi_pins_0: spi0 {
 		pins_spi {
 			pinmux = <PINMUX_GPIO132__FUNC_SPIM0_CSB>,
 				 <PINMUX_GPIO134__FUNC_SPIM0_MO>,
@@ -1284,6 +1284,8 @@
 
 &spmi {
 	grpid = <11>;
+	#address-cells = <2>;
+	#size-cells = <2>;
 	mt6315_6: mt6315@6 {
 		compatible = "mediatek,mt6315-regulator";
 		reg = <0x6 0 0xb 1>;
@@ -1419,14 +1421,14 @@
                status = "okay"; /* rev2 */
 	};
 
-	rt5682s: rt5682s@1a {
-               compatible = "realtek,rt5682s";
-               reg = <0x1a>;
-               interrupt-parent = <&pio>;
-               interrupts = <89 IRQ_TYPE_EDGE_BOTH>;
-               realtek,jd-src = <1>;
-               status = "disabled"; /*tomato-rev3*/
-	};
+//	rt5682s: rt5682s@1a {
+//               compatible = "realtek,rt5682s";
+//               reg = <0x1a>;
+//               interrupt-parent = <&pio>;
+//               interrupts = <89 IRQ_TYPE_EDGE_BOTH>;
+//               realtek,jd-src = <1>;
+//               status = "disabled"; /*tomato-rev3*/
+//	};
 	rt1011_l: rt1011@38 {
 		compatible = "realtek,rt1011";
 		reg = <0x38>;

@@ -944,6 +944,8 @@
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
 			reg = <0 0x1100a000 0 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			interrupts = <GIC_SPI 191 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
 				 <&topckgen CLK_TOP_SPI>,
@@ -978,6 +980,8 @@
 		spi1: spi@11010000 {
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0 0x11010000 0 0x100>;
 			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
@@ -990,6 +994,8 @@
 		spi2: spi@11012000 {
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0 0x11012000 0 0x100>;
 			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
@@ -1002,6 +1008,8 @@
 		spi3: spi@11013000 {
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0 0x11013000 0 0x100>;
 			interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
@@ -1014,6 +1022,8 @@
 		spi4: spi@11018000 {
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0 0x11018000 0 0x100>;
 			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
@@ -1026,6 +1036,8 @@
 		spi5: spi@11019000 {
 			compatible = "mediatek,mt8195-spi",
 				     "mediatek,mt6765-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0 0x11019000 0 0x100>;
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
@@ -1269,7 +1281,7 @@
 			};
 		};
 
-		nor_flash: nor@1132c000 {
+		nor_flash: spi@1132c000 {
 			compatible = "mediatek,mt8195-nor",
 				     "mediatek,mt8173-nor";
 			reg = <0 0x1132c000 0 0x1000>;
@@ -1288,7 +1300,7 @@
 			reg = <0 0x11c10000 0 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			dp_calibration: dp_data {
+			dp_calibration: dp_data@1ac {
 				reg = <0x1ac 0x10>;
 			};
 		};
@@ -2605,7 +2617,7 @@
 			#size-cells = <2>;
 			ranges;
 
-			vcodec_lat_soc: vcodec_lat_soc@0x18002000 {
+			vcodec_lat_soc: vcodec_lat_soc@18002000 {
 				compatible = "mediatek,mtk-vcodec-lat-soc";
 				reg = <0 0x18002000 0 0x800>;		/* VDEC_MISC */
 				reg-names = "misc";
@@ -2621,7 +2633,7 @@
 				power-domains = <&spm MT8195_POWER_DOMAIN_VDEC0>;
 			};
 
-			vcodec_lat: vcodec_lat@0x18010000 {
+			vcodec_lat: vcodec_lat@18010000 {
 				compatible = "mediatek,mtk-vcodec-lat";
 				reg = <0 0x18010000 0 0x800>;		/* VDEC_MISC */
 				reg-names = "misc";
@@ -2642,7 +2654,7 @@
 				power-domains =  <&spm MT8195_POWER_DOMAIN_VDEC0>;
 			};
 
-			vcodec_core: vcodec_core@0x18025000 {
+			vcodec_core: vcodec_core@18025000 {
 				compatible = "mediatek,mtk-vcodec-core";
 				reg = <0 0x18025000 0 0x1000>;		/* VDEC_CORE_MISC */
 				reg-names = "misc";
@@ -2667,7 +2679,7 @@
 				power-domains = <&spm MT8195_POWER_DOMAIN_VDEC1>;
 			};
 
-			vcodec_core1: vcodec_core1@0x18035000 {
+			vcodec_core1: vcodec_core1@18035000 {
 				compatible = "mediatek,mtk-vcodec-core1";
 				reg = <0 0x18035000 0 0x1000>;		/* VDEC_CORE1_MISC */
 				reg-names = "misc";
@@ -2804,6 +2816,8 @@
 
 		venc: venc@1a020000 {
 			compatible = "mediatek,mt8195-vcodec-enc";
+			#address-cells = <2>;
+			#size-cells = <2>;
 			reg = <0 0x1a020000 0 0x10000>;/* VENC_C0 */
 			iommus = <&iommu_vdo M4U_PORT_L19_VENC_RCPU>,
 				 <&iommu_vdo M4U_PORT_L19_VENC_REC>,
