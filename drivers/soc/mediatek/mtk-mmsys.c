@@ -10,6 +10,7 @@
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
 #include <linux/reset-controller.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
 #include <linux/soc/mediatek/mtk-cmdq.h>
@@ -115,9 +116,8 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 };
 
 struct mtk_mmsys {
-	void __iomem *regs;
+	struct regmap *regmap;
 	const struct mtk_mmsys_driver_data *data;
-	spinlock_t lock; /* protects mmsys_sw_rst_b reg */
 	struct reset_controller_dev rcdev;
 	struct cmdq_client_reg cmdq_base;
 	phys_addr_t addr;
@@ -130,16 +130,15 @@ void mtk_mmsys_ddp_connect(struct device *dev,
 {
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
 	const struct mtk_mmsys_routes *routes = mmsys->data->routes;
-	u32 reg;
 	int i;
 
-	for (i = 0; i < mmsys->data->num_routes; i++)
-		if (cur == routes[i].from_comp && next == routes[i].to_comp) {
-			reg = readl_relaxed(mmsys->regs + routes[i].addr);
-			reg &= ~routes[i].mask;
-			reg |= routes[i].val;
-			writel_relaxed(reg, mmsys->regs + routes[i].addr);
-		}
+	for (i = 0; i < mmsys->data->num_routes; i++) {
+		if (cur != routes[i].from_comp || next != routes[i].to_comp)
+			continue;
+
+		regmap_update_bits(mmsys->regmap, routes[i].addr,
+				   routes[i].mask, routes[i].val);
+	}
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_connect);
 
@@ -149,15 +148,14 @@ void mtk_mmsys_ddp_disconnect(struct device *dev,
 {
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
 	const struct mtk_mmsys_routes *routes = mmsys->data->routes;
-	u32 reg;
 	int i;
 
-	for (i = 0; i < mmsys->data->num_routes; i++)
-		if (cur == routes[i].from_comp && next == routes[i].to_comp) {
-			reg = readl_relaxed(mmsys->regs + routes[i].addr);
-			reg &= ~routes[i].mask;
-			writel_relaxed(reg, mmsys->regs + routes[i].addr);
-		}
+	for (i = 0; i < mmsys->data->num_routes; i++) {
+		if (cur != routes[i].from_comp || next != routes[i].to_comp)
+			continue;
+
+		regmap_clear_bits(mmsys->regmap, routes[i].addr, routes[i].mask);
+	}
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_disconnect);
 
@@ -328,41 +326,22 @@ void mtk_mmsys_mdp_camin_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_camin_ctrl);
 
-static int mtk_mmsys_reset_update(struct reset_controller_dev *rcdev, unsigned long id,
-				  bool assert)
-{
-	struct mtk_mmsys *mmsys = container_of(rcdev, struct mtk_mmsys, rcdev);
-	unsigned long flags;
-	u32 offset;
-	u32 reg;
-
-	offset = (id / MMSYS_SW_RESET_PER_REG) * sizeof(u32);
-	id = id % MMSYS_SW_RESET_PER_REG;
-
-	spin_lock_irqsave(&mmsys->lock, flags);
-
-	reg = readl_relaxed(mmsys->regs + mmsys->data->sw_reset_start + offset);
-
-	if (assert)
-		reg &= ~BIT(id);
-	else
-		reg |= BIT(id);
-
-	writel_relaxed(reg, mmsys->regs + mmsys->data->sw_reset_start + offset);
-
-	spin_unlock_irqrestore(&mmsys->lock, flags);
-
-	return 0;
-}
-
 static int mtk_mmsys_reset_assert(struct reset_controller_dev *rcdev, unsigned long id)
 {
-	return mtk_mmsys_reset_update(rcdev, id, true);
+	struct mtk_mmsys *mmsys = container_of(rcdev, struct mtk_mmsys, rcdev);
+	u32 ctl = do_div(id, MMSYS_SW_RESET_PER_REG);
+	u32 reg = mmsys->data->sw_reset_start + (id * sizeof(u32));
+
+	return regmap_set_bits(mmsys->regmap, reg, BIT(ctl));
 }
 
 static int mtk_mmsys_reset_deassert(struct reset_controller_dev *rcdev, unsigned long id)
 {
-	return mtk_mmsys_reset_update(rcdev, id, false);
+	struct mtk_mmsys *mmsys = container_of(rcdev, struct mtk_mmsys, rcdev);
+	u32 ctl = do_div(id, MMSYS_SW_RESET_PER_REG);
+	u32 reg = mmsys->data->sw_reset_start + (id * sizeof(u32));
+
+	return regmap_clear_bits(mmsys->regmap, reg, BIT(ctl));
 }
 
 static int mtk_mmsys_reset(struct reset_controller_dev *rcdev, unsigned long id)
@@ -415,10 +394,7 @@ void mtk_mmsys_ddp_config(struct device *dev, enum mtk_mmsys_config_type config,
 				    mask);
 	} else {
 #endif
-		u32 tmp = readl(mmsys->regs + offset);
-
-		tmp = (tmp & ~mask) | reg_val;
-		writel(tmp, mmsys->regs + offset);
+		regmap_update_bits(mmsys->regmap, offset, mask, reg_val);
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
 	}
 #endif
@@ -437,6 +413,14 @@ void mtk_mmsys_write_reg(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg);
 
+static const struct regmap_config mtk_mmsys_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.fast_io = true,
+	.use_relaxed_mmio = true,
+};
+
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -445,16 +429,22 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	struct mtk_mmsys *mmsys;
 	struct resource res;
 	struct cmdq_client_reg cmdq_reg;
+	void __iomem *base;
 	int ret;
 
 	mmsys = devm_kzalloc(dev, sizeof(*mmsys), GFP_KERNEL);
 	if (!mmsys)
 		return -ENOMEM;
 
-	mmsys->regs = devm_platform_ioremap_resource(pdev, 0);
-	if (IS_ERR(mmsys->regs))
-		return dev_err_probe(dev, PTR_ERR(mmsys->regs),
+	base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(base))
+		return dev_err_probe(dev, PTR_ERR(base),
 				     "Failed to ioremap mmsys registers\n");
+
+	mmsys->regmap = devm_regmap_init_mmio(dev, base, &mtk_mmsys_regmap_config);
+	if (IS_ERR(mmsys->regmap))
+		return dev_err_probe(dev, PTR_ERR(mmsys->regmap),
+				     "Cannot initialize mmsys regmap\n");
 
 	if (of_address_to_resource(dev->of_node, 0, &res) < 0)
 		mmsys->addr = 0L;
@@ -466,7 +456,6 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	mmsys->subsys_id = cmdq_reg.subsys;
 
 	mmsys->data = of_device_get_match_data(&pdev->dev);
-	spin_lock_init(&mmsys->lock);
 
 	mmsys->rcdev.owner = THIS_MODULE;
 	mmsys->rcdev.nr_resets = mmsys->data->num_resets;
