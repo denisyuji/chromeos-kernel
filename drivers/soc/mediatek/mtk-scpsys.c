@@ -10,6 +10,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/soc/mediatek/infracfg.h>
 
@@ -149,7 +150,7 @@ struct scp {
 	struct scp_domain *domains;
 	struct genpd_onecell_data pd_data;
 	struct device *dev;
-	void __iomem *base;
+	struct regmap *regmap;
 	struct regmap *infracfg;
 	struct scp_ctrl_reg ctrl_reg;
 	bool bus_prot_reg_update;
@@ -168,28 +169,6 @@ struct scp_soc_data {
 	const struct scp_ctrl_reg regs;
 	bool bus_prot_reg_update;
 };
-
-static int scpsys_domain_is_on(struct scp_domain *scpd)
-{
-	struct scp *scp = scpd->scp;
-
-	u32 status = readl(scp->base + scp->ctrl_reg.pwr_sta_offs) &
-						scpd->data->sta_mask;
-	u32 status2 = readl(scp->base + scp->ctrl_reg.pwr_sta2nd_offs) &
-						scpd->data->sta_mask;
-
-	/*
-	 * A domain is on when both status bits are set. If only one is set
-	 * return an error. This happens while powering up a domain
-	 */
-
-	if (status && status2)
-		return true;
-	if (!status && !status2)
-		return false;
-
-	return -EINVAL;
-}
 
 static int scpsys_regulator_enable(struct scp_domain *scpd)
 {
@@ -230,15 +209,17 @@ static int scpsys_clk_enable(struct clk *clk[], int max_num)
 	return ret;
 }
 
-static int scpsys_sram_enable(struct scp_domain *scpd, void __iomem *ctl_addr)
+static int scpsys_sram_enable(struct scp_domain *scpd, u32 ctl_reg)
 {
-	u32 val;
+	struct scp *scp = scpd->scp;
 	u32 pdn_ack = scpd->data->sram_pdn_ack_bits;
-	int tmp;
+	u32 pdn_mask = scpd->data->sram_pdn_bits;
+	u32 tmp;
+	int ret;
 
-	val = readl(ctl_addr);
-	val &= ~scpd->data->sram_pdn_bits;
-	writel(val, ctl_addr);
+	ret = regmap_clear_bits(scp->regmap, ctl_reg, pdn_mask);
+	if (ret)
+		return ret;
 
 	/* Either wait until SRAM_PDN_ACK all 0 or have a force wait */
 	if (MTK_SCPD_CAPS(scpd, MTK_SCPD_FWAIT_SRAM)) {
@@ -249,31 +230,33 @@ static int scpsys_sram_enable(struct scp_domain *scpd, void __iomem *ctl_addr)
 		 */
 		usleep_range(12000, 12100);
 	} else {
-		/* Either wait until SRAM_PDN_ACK all 1 or 0 */
-		int ret = readl_poll_timeout(ctl_addr, tmp,
-				(tmp & pdn_ack) == 0,
-				MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
-		if (ret < 0)
+		/* Wait until SRAM_PDN_ACK is all 0 */
+		ret = regmap_read_poll_timeout(scp->regmap, ctl_reg,
+					       tmp, !(tmp & pdn_ack),
+					       MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+		if (ret)
 			return ret;
 	}
 
 	return 0;
 }
 
-static int scpsys_sram_disable(struct scp_domain *scpd, void __iomem *ctl_addr)
+static int scpsys_sram_disable(struct scp_domain *scpd, u32 ctl_reg)
 {
-	u32 val;
+	struct scp *scp = scpd->scp;
 	u32 pdn_ack = scpd->data->sram_pdn_ack_bits;
-	int tmp;
+	u32 pdn_mask = scpd->data->sram_pdn_bits;
+	u32 tmp;
+	int ret;
 
-	val = readl(ctl_addr);
-	val |= scpd->data->sram_pdn_bits;
-	writel(val, ctl_addr);
+	ret = regmap_set_bits(scp->regmap, ctl_reg, pdn_mask);
+	if (ret)
+		return ret;
 
-	/* Either wait until SRAM_PDN_ACK all 1 or 0 */
-	return readl_poll_timeout(ctl_addr, tmp,
-			(tmp & pdn_ack) == pdn_ack,
-			MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	/* Wait until SRAM_PDN_ACK is all 1 */
+	return regmap_read_poll_timeout(scp->regmap, ctl_reg, tmp,
+				        (tmp & pdn_ack) == pdn_ack,
+				        MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
 }
 
 static int scpsys_bus_protect_enable(struct scp_domain *scpd)
@@ -304,9 +287,10 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 {
 	struct scp_domain *scpd = container_of(genpd, struct scp_domain, genpd);
 	struct scp *scp = scpd->scp;
-	void __iomem *ctl_addr = scp->base + scpd->data->ctl_offs;
+	struct scp_ctrl_reg *regs = &scp->ctrl_reg;
+	u32 reg = scpd->data->ctl_offs;
 	u32 val;
-	int ret, tmp;
+	int ret;
 
 	ret = scpsys_regulator_enable(scpd);
 	if (ret < 0)
@@ -317,28 +301,27 @@ static int scpsys_power_on(struct generic_pm_domain *genpd)
 		goto err_clk;
 
 	/* subsys power on */
-	val = readl(ctl_addr);
-	val |= PWR_ON_BIT;
-	writel(val, ctl_addr);
-	val |= PWR_ON_2ND_BIT;
-	writel(val, ctl_addr);
+	regmap_set_bits(scp->regmap, reg, PWR_ON_BIT);
+	regmap_set_bits(scp->regmap, reg, PWR_ON_2ND_BIT);
 
 	/* wait until PWR_ACK = 1 */
-	ret = readx_poll_timeout(scpsys_domain_is_on, scpd, tmp, tmp > 0,
-				 MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
-	if (ret < 0)
+	ret = regmap_read_poll_timeout(scp->regmap, regs->pwr_sta_offs,
+				       val, val & scpd->data->sta_mask,
+				       MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret)
 		goto err_pwr_ack;
 
-	val &= ~PWR_CLK_DIS_BIT;
-	writel(val, ctl_addr);
+	ret = regmap_read_poll_timeout(scp->regmap, regs->pwr_sta2nd_offs,
+				       val, val & scpd->data->sta_mask,
+				       MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret)
+		goto err_pwr_ack;
 
-	val &= ~PWR_ISO_BIT;
-	writel(val, ctl_addr);
+	regmap_clear_bits(scp->regmap, reg, PWR_ISO_BIT);
+	regmap_set_bits(scp->regmap, reg, PWR_RST_B_BIT);
+	regmap_clear_bits(scp->regmap, reg, PWR_CLK_DIS_BIT);
 
-	val |= PWR_RST_B_BIT;
-	writel(val, ctl_addr);
-
-	ret = scpsys_sram_enable(scpd, ctl_addr);
+	ret = scpsys_sram_enable(scpd, reg);
 	if (ret < 0)
 		goto err_pwr_ack;
 
@@ -362,39 +345,35 @@ static int scpsys_power_off(struct generic_pm_domain *genpd)
 {
 	struct scp_domain *scpd = container_of(genpd, struct scp_domain, genpd);
 	struct scp *scp = scpd->scp;
-	void __iomem *ctl_addr = scp->base + scpd->data->ctl_offs;
+	struct scp_ctrl_reg *regs = &scp->ctrl_reg;
+	u32 reg = scpd->data->ctl_offs;
 	u32 val;
-	int ret, tmp;
+	int ret;
 
 	ret = scpsys_bus_protect_enable(scpd);
 	if (ret < 0)
 		goto out;
 
-	ret = scpsys_sram_disable(scpd, ctl_addr);
+	ret = scpsys_sram_disable(scpd, reg);
 	if (ret < 0)
 		goto out;
 
 	/* subsys power off */
-	val = readl(ctl_addr);
-	val |= PWR_ISO_BIT;
-	writel(val, ctl_addr);
-
-	val &= ~PWR_RST_B_BIT;
-	writel(val, ctl_addr);
-
-	val |= PWR_CLK_DIS_BIT;
-	writel(val, ctl_addr);
-
-	val &= ~PWR_ON_BIT;
-	writel(val, ctl_addr);
-
-	val &= ~PWR_ON_2ND_BIT;
-	writel(val, ctl_addr);
+	regmap_set_bits(scp->regmap, reg, PWR_ISO_BIT);
+	regmap_clear_bits(scp->regmap, reg, PWR_RST_B_BIT);
+	regmap_set_bits(scp->regmap, reg, PWR_CLK_DIS_BIT);
+	regmap_clear_bits(scp->regmap, reg, PWR_ON_BIT);
+	regmap_clear_bits(scp->regmap, reg, PWR_ON_2ND_BIT);
 
 	/* wait until PWR_ACK = 0 */
-	ret = readx_poll_timeout(scpsys_domain_is_on, scpd, tmp, tmp == 0,
-				 MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
-	if (ret < 0)
+	ret = regmap_read_poll_timeout(scp->regmap, regs->pwr_sta_offs, val,
+				       val == 0, MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret)
+		goto out;
+
+	ret = regmap_read_poll_timeout(scp->regmap, regs->pwr_sta2nd_offs, val,
+				       val == 0, MTK_POLL_DELAY_US, MTK_POLL_TIMEOUT);
+	if (ret)
 		goto out;
 
 	scpsys_clk_disable(scpd->clk, MAX_CLKS);
@@ -419,6 +398,13 @@ static void init_clks(struct platform_device *pdev, struct clk **clk)
 		clk[i] = devm_clk_get(&pdev->dev, clk_names[i]);
 }
 
+static const struct regmap_config mtk_scpsys_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.disable_locking = true,
+};
+
 static struct scp *init_scp(struct platform_device *pdev,
 			const struct scp_domain_data *scp_domain_data, int num,
 			const struct scp_ctrl_reg *scp_ctrl_reg,
@@ -429,6 +415,7 @@ static struct scp *init_scp(struct platform_device *pdev,
 	int i, j;
 	struct scp *scp;
 	struct clk *clk[CLK_MAX];
+	void __iomem *base;
 
 	scp = devm_kzalloc(&pdev->dev, sizeof(*scp), GFP_KERNEL);
 	if (!scp)
@@ -442,9 +429,14 @@ static struct scp *init_scp(struct platform_device *pdev,
 	scp->dev = &pdev->dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	scp->base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(scp->base))
-		return ERR_CAST(scp->base);
+	base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(base))
+		return ERR_CAST(base);
+
+	scp->regmap = devm_regmap_init_mmio(&pdev->dev, base,
+					    &mtk_scpsys_regmap_config);
+	if (IS_ERR(scp->regmap))
+		return ERR_CAST(scp->regmap);
 
 	scp->domains = devm_kcalloc(&pdev->dev,
 				num, sizeof(*scp->domains), GFP_KERNEL);
