@@ -452,11 +452,9 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mmsys->regs = devm_platform_ioremap_resource(pdev, 0);
-	if (IS_ERR(mmsys->regs)) {
-		ret = PTR_ERR(mmsys->regs);
-		dev_err(dev, "Failed to ioremap mmsys registers: %d\n", ret);
-		return ret;
-	}
+	if (IS_ERR(mmsys->regs))
+		return dev_err_probe(dev, PTR_ERR(mmsys->regs),
+				     "Failed to ioremap mmsys registers\n");
 
 	if (of_address_to_resource(dev->of_node, 0, &res) < 0)
 		mmsys->addr = 0L;
@@ -475,10 +473,8 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	mmsys->rcdev.ops = &mtk_mmsys_reset_ops;
 	mmsys->rcdev.of_node = pdev->dev.of_node;
 	ret = devm_reset_controller_register(&pdev->dev, &mmsys->rcdev);
-	if (ret) {
-		dev_err(&pdev->dev, "Couldn't register mmsys reset controller: %d\n", ret);
-		return ret;
-	}
+	if (ret)
+		return dev_err_probe(dev, ret, "Cannot register mmsys reset controller\n");
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
 	ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
