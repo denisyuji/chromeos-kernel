@@ -201,6 +201,8 @@ static const struct panfrost_model gpu_models[] = {
 	GPU_MODEL(g52, 0x7002),
 	GPU_MODEL(g31, 0x7003,
 		GPU_REV(g31, 1, 0)),
+
+	GPU_MODEL(g57, 0x9001),
 };
 
 static void panfrost_gpu_init_features(struct panfrost_device *pfdev)
