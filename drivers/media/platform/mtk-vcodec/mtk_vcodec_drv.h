@@ -449,6 +449,7 @@ struct mtk_vcodec_enc_pdata {
 };
 
 #define MTK_ENC_CTX_IS_EXT(ctx) ((ctx)->dev->venc_pdata->uses_ext)
+#define MTK_ENC_CORE_MODE(ctx) ((ctx)->dev->venc_pdata->core_mode)
 
 /**
  * struct mtk_vcodec_dev - driver data

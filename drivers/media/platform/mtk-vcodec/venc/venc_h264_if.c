@@ -51,6 +51,24 @@ enum venc_h264_vpu_work_buf {
 };
 
 /*
+ * enum venc_dual_core_work_buf - h264 dual core encoder buffer index
+ */
+enum venc_dual_core_work_buf {
+	VENC_DUAL_CORE_WORK_BUF_RC_INFO_CORE0,
+	VENC_DUAL_CORE_WORK_BUF_RC_CODE,
+	VENC_DUAL_CORE_WORK_BUF_REC_LUMA,
+	VENC_DUAL_CORE_WORK_BUF_REC_CHROMA,
+	VENC_DUAL_CORE_WORK_BUF_REF_LUMA,
+	VENC_DUAL_CORE_WORK_BUF_REF_CHROMA,
+	VENC_DUAL_CORE_WORK_BUF_MV_INFO_1,
+	VENC_DUAL_CORE_WORK_BUF_MV_INFO_2,
+	VENC_DUAL_CORE_WORK_BUF_SKIP_FRAME,
+	VENC_DUAL_CORE_WORK_BUF_RC_INFO_CORE1,
+	VENC_DUAL_CORE_WORK_BUF_FR_RC_INFO,
+	VENC_DUAL_CORE_WORK_BUF_MAX,
+};
+
+/*
  * enum venc_h264_bs_mode - for bs_mode argument in h264_enc_vpu_encode
  */
 enum venc_h264_bs_mode {
@@ -94,6 +112,24 @@ struct venc_h264_vpu_config {
 	u32 wfd;
 };
 
+struct venc_dual_core_config {
+	u32 input_fourcc;
+	u32 bitrate;
+	u32 pic_w;
+	u32 pic_h;
+	u32 buf_w;
+	u32 buf_h;
+	u32 gop_size;
+	u32 intra_period;
+	u32 framerate;
+	u32 profile;
+	u32 level;
+	u32 wfd;
+	u32 max_qp;
+	u32 min_qp;
+	u32 reserved[8];
+};
+
 /*
  * struct venc_h264_vpu_buf - Structure for buffer information
  *                            AP-W/R : AP is writer/reader on this item
@@ -127,6 +163,11 @@ struct venc_h264_vsi {
 	struct venc_h264_vpu_buf work_bufs[VENC_H264_VPU_WORK_BUF_MAX];
 };
 
+struct venc_dual_core_vsi {
+	struct venc_dual_core_config config;
+	struct venc_h264_vpu_buf work_bufs[VENC_DUAL_CORE_WORK_BUF_MAX];
+};
+
 /*
  * struct venc_h264_inst - h264 encoder AP driver instance
  * @hw_base: h264 encoder hardware register base
@@ -143,8 +184,8 @@ struct venc_h264_vsi {
  * @ctx: context for v4l2 layer integration
  */
 struct venc_h264_inst {
-	void __iomem *hw_base;
-	struct mtk_vcodec_mem work_bufs[VENC_H264_VPU_WORK_BUF_MAX];
+	void __iomem *hw_base[MTK_VENC_CORE_MAX];
+	struct mtk_vcodec_mem work_bufs[VENC_DUAL_CORE_WORK_BUF_MAX];
 	struct mtk_vcodec_mem pps_buf;
 	bool work_buf_allocated;
 	unsigned int frm_cnt;
@@ -152,12 +193,13 @@ struct venc_h264_inst {
 	unsigned int prepend_hdr;
 	struct venc_vpu_inst vpu_inst;
 	struct venc_h264_vsi *vsi;
+	struct venc_dual_core_vsi *core_vsi;
 	struct mtk_vcodec_ctx *ctx;
 };
 
 static inline u32 h264_read_reg(struct venc_h264_inst *inst, u32 addr)
 {
-	return readl(inst->hw_base + addr);
+	return readl(inst->hw_base[MTK_VENC_CORE0] + addr);
 }
 
 static unsigned int h264_get_profile(struct venc_h264_inst *inst,
@@ -228,13 +270,21 @@ static unsigned int h264_get_level(struct venc_h264_inst *inst,
 static void h264_enc_free_work_buf(struct venc_h264_inst *inst)
 {
 	int i;
+	struct mtk_vcodec_ctx *ctx = inst->ctx;
+	int max_work_buf;
+	bool is_dual_core = (MTK_ENC_CORE_MODE(ctx) == VENC_DUAL_CORE_MODE);
 
 	mtk_vcodec_debug_enter(inst);
+
+	if (is_dual_core)
+		max_work_buf = VENC_DUAL_CORE_WORK_BUF_MAX;
+	else
+		max_work_buf = VENC_H264_VPU_WORK_BUF_MAX;
 
 	/* Except the SKIP_FRAME buffers,
 	 * other buffers need to be freed by AP.
 	 */
-	for (i = 0; i < VENC_H264_VPU_WORK_BUF_MAX; i++) {
+	for (i = 0; i < max_work_buf; i++) {
 		if (i != VENC_H264_VPU_WORK_BUF_SKIP_FRAME)
 			mtk_vcodec_mem_free(inst->ctx, &inst->work_bufs[i]);
 	}
@@ -248,11 +298,22 @@ static int h264_enc_alloc_work_buf(struct venc_h264_inst *inst)
 {
 	int i;
 	int ret = 0;
-	struct venc_h264_vpu_buf *wb = inst->vsi->work_bufs;
+	struct mtk_vcodec_ctx *ctx = inst->ctx;
+	struct venc_h264_vpu_buf *wb;
+	int max_work_buf;
+	bool is_dual_core = (MTK_ENC_CORE_MODE(ctx) == VENC_DUAL_CORE_MODE);
 
 	mtk_vcodec_debug_enter(inst);
 
-	for (i = 0; i < VENC_H264_VPU_WORK_BUF_MAX; i++) {
+	if (is_dual_core) {
+		wb = inst->core_vsi->work_bufs;
+		max_work_buf = VENC_DUAL_CORE_WORK_BUF_MAX;
+	} else {
+		wb = inst->vsi->work_bufs;
+		max_work_buf = VENC_H264_VPU_WORK_BUF_MAX;
+	}
+
+	for (i = 0; i < max_work_buf; i++) {
 		/*
 		 * This 'wb' structure is set by VPU side and shared to AP for
 		 * buffer allocation and IO virtual addr mapping. For most of
@@ -358,6 +419,26 @@ static int h264_frame_type(struct venc_h264_inst *inst)
 		return VENC_H264_P_FRM;  /* Note: B frames are not supported */
 	}
 }
+
+static int h264_core_frame_type(struct venc_h264_inst *inst)
+{
+	struct venc_dual_core_vsi *vsi = inst->core_vsi;
+
+	if ((vsi->config.gop_size != 0 &&
+	     (inst->frm_cnt % vsi->config.gop_size) == 0) ||
+	    (inst->frm_cnt == 0 && vsi->config.gop_size == 0)) {
+		/* IDR frame */
+		return VENC_H264_IDR_FRM;
+	} else if ((vsi->config.intra_period != 0 &&
+		    (inst->frm_cnt % vsi->config.intra_period) == 0) ||
+		   (inst->frm_cnt == 0 && vsi->config.intra_period == 0)) {
+		/* I frame */
+		return VENC_H264_I_FRM;
+	} else {
+		return VENC_H264_P_FRM;  /* Note: B frames are not supported */
+	}
+}
+
 static int h264_encode_sps(struct venc_h264_inst *inst,
 			   struct mtk_vcodec_mem *bs_buf,
 			   unsigned int *bs_size)
@@ -440,12 +521,18 @@ static int h264_encode_frame(struct venc_h264_inst *inst,
 	int ret = 0;
 	unsigned int irq_status;
 	struct venc_frame_info frame_info;
+	struct mtk_vcodec_ctx *ctx = inst->ctx;
+	bool is_dual_core = (MTK_ENC_CORE_MODE(ctx) == VENC_DUAL_CORE_MODE);
 
 	mtk_vcodec_debug_enter(inst);
 	mtk_vcodec_debug(inst, "frm_cnt = %d\n ", inst->frm_cnt);
 	frame_info.frm_count = inst->frm_cnt;
 	frame_info.skip_frm_count = inst->skip_frm_cnt;
-	frame_info.frm_type = h264_frame_type(inst);
+	if (is_dual_core)
+		frame_info.frm_type = h264_core_frame_type(inst);
+	else
+		frame_info.frm_type = h264_frame_type(inst);
+
 	mtk_vcodec_debug(inst, "frm_count = %d,skip_frm_count =%d,frm_type=%d.\n",
 			 frame_info.frm_count, frame_info.skip_frm_count,
 			 frame_info.frm_type);
@@ -501,7 +588,8 @@ static void h264_encode_filler(struct venc_h264_inst *inst, void *buf,
 static int h264_enc_init(struct mtk_vcodec_ctx *ctx)
 {
 	const bool is_ext = MTK_ENC_CTX_IS_EXT(ctx);
-	int ret = 0;
+	bool is_dual_core = (MTK_ENC_CORE_MODE(ctx) == VENC_DUAL_CORE_MODE);
+	int ret, i = 0;
 	struct venc_h264_inst *inst;
 
 	inst = kzalloc(sizeof(*inst), GFP_KERNEL);
@@ -511,13 +599,22 @@ static int h264_enc_init(struct mtk_vcodec_ctx *ctx)
 	inst->ctx = ctx;
 	inst->vpu_inst.ctx = ctx;
 	inst->vpu_inst.id = is_ext ? SCP_IPI_VENC_H264 : IPI_VENC_H264;
-	inst->hw_base = mtk_vcodec_get_reg_addr(inst->ctx, VENC_SYS);
 
 	mtk_vcodec_debug_enter(inst);
 
 	ret = vpu_enc_init(&inst->vpu_inst);
 
-	inst->vsi = (struct venc_h264_vsi *)inst->vpu_inst.vsi;
+	if (is_dual_core) {
+		inst->core_vsi =
+			(struct venc_dual_core_vsi *)inst->vpu_inst.vsi;
+		for (i = 0; i < MTK_VENC_CORE_MAX; i++)
+			inst->hw_base[i] =
+				mtk_venc_get_core_reg_addr(inst->ctx, i);
+
+	} else {
+		inst->vsi = (struct venc_h264_vsi *)inst->vpu_inst.vsi;
+		inst->hw_base[0] = mtk_vcodec_get_reg_addr(inst->ctx, VENC_SYS);
+	}
 
 	mtk_vcodec_debug_leave(inst);
 
@@ -624,31 +721,62 @@ encode_err:
 	return ret;
 }
 
+static void h264_enc_set_configs(struct venc_h264_inst *inst,
+				 struct venc_enc_param *enc_prm)
+{
+	inst->vsi->config.input_fourcc = enc_prm->input_yuv_fmt;
+	inst->vsi->config.bitrate = enc_prm->bitrate;
+	inst->vsi->config.pic_w = enc_prm->width;
+	inst->vsi->config.pic_h = enc_prm->height;
+	inst->vsi->config.buf_w = enc_prm->buf_width;
+	inst->vsi->config.buf_h = enc_prm->buf_height;
+	inst->vsi->config.gop_size = enc_prm->gop_size;
+	inst->vsi->config.framerate = enc_prm->frm_rate;
+	inst->vsi->config.intra_period = enc_prm->intra_period;
+	inst->vsi->config.profile =
+		h264_get_profile(inst, enc_prm->h264_profile);
+	inst->vsi->config.level =
+		h264_get_level(inst, enc_prm->h264_level);
+	inst->vsi->config.wfd = 0;
+}
+
+static void h264_enc_set_core_configs(struct venc_h264_inst *inst,
+				      struct venc_enc_param *enc_prm)
+{
+	inst->core_vsi->config.input_fourcc = enc_prm->input_yuv_fmt;
+	inst->core_vsi->config.bitrate = enc_prm->bitrate;
+	inst->core_vsi->config.pic_w = enc_prm->width;
+	inst->core_vsi->config.pic_h = enc_prm->height;
+	inst->core_vsi->config.buf_w = enc_prm->buf_width;
+	inst->core_vsi->config.buf_h = enc_prm->buf_height;
+	inst->core_vsi->config.gop_size = enc_prm->gop_size;
+	inst->core_vsi->config.framerate = enc_prm->frm_rate;
+	inst->core_vsi->config.intra_period = enc_prm->intra_period;
+	inst->core_vsi->config.profile =
+		h264_get_profile(inst, enc_prm->h264_profile);
+	inst->core_vsi->config.level =
+		h264_get_level(inst, enc_prm->h264_level);
+	inst->core_vsi->config.wfd = 0;
+}
+
 static int h264_enc_set_param(void *handle,
 			      enum venc_set_param_type type,
 			      struct venc_enc_param *enc_prm)
 {
 	int ret = 0;
 	struct venc_h264_inst *inst = (struct venc_h264_inst *)handle;
+	struct mtk_vcodec_ctx *ctx = inst->ctx;
+	bool is_dual_core = (MTK_ENC_CORE_MODE(ctx) == VENC_DUAL_CORE_MODE);
 
-	mtk_vcodec_debug(inst, "->type=%d", type);
+	mtk_vcodec_debug(inst, "->type=%d, dual_core=%d", type, is_dual_core);
 
 	switch (type) {
 	case VENC_SET_PARAM_ENC:
-		inst->vsi->config.input_fourcc = enc_prm->input_yuv_fmt;
-		inst->vsi->config.bitrate = enc_prm->bitrate;
-		inst->vsi->config.pic_w = enc_prm->width;
-		inst->vsi->config.pic_h = enc_prm->height;
-		inst->vsi->config.buf_w = enc_prm->buf_width;
-		inst->vsi->config.buf_h = enc_prm->buf_height;
-		inst->vsi->config.gop_size = enc_prm->gop_size;
-		inst->vsi->config.framerate = enc_prm->frm_rate;
-		inst->vsi->config.intra_period = enc_prm->intra_period;
-		inst->vsi->config.profile =
-			h264_get_profile(inst, enc_prm->h264_profile);
-		inst->vsi->config.level =
-			h264_get_level(inst, enc_prm->h264_level);
-		inst->vsi->config.wfd = 0;
+		if (is_dual_core)
+			h264_enc_set_core_configs(inst, enc_prm);
+		else
+			h264_enc_set_configs(inst, enc_prm);
+
 		ret = vpu_enc_set_param(&inst->vpu_inst, type, enc_prm);
 		if (ret)
 			break;

@@ -11,6 +11,7 @@
 
 #include "mtk_vcodec_dec_hw.h"
 #include "mtk_vcodec_drv.h"
+#include "mtk_vcodec_enc_core.h"
 #include "mtk_vcodec_util.h"
 
 void __iomem *mtk_vcodec_get_reg_addr(struct mtk_vcodec_ctx *data,
@@ -25,6 +26,24 @@ void __iomem *mtk_vcodec_get_reg_addr(struct mtk_vcodec_ctx *data,
 	return ctx->dev->reg_base[reg_idx];
 }
 EXPORT_SYMBOL(mtk_vcodec_get_reg_addr);
+
+void __iomem *mtk_venc_get_core_reg_addr(struct mtk_vcodec_ctx *ctx,
+					 unsigned int core_id)
+{
+	struct mtk_venc_core_dev *core;
+
+	if (core_id >= MTK_VENC_CORE_MAX) {
+		mtk_v4l2_err("Invalid core_id = %d", core_id);
+		return NULL;
+	}
+
+	core = (struct mtk_venc_core_dev *)ctx->dev->enc_core_dev[core_id];
+	if (!core)
+		return NULL;
+
+	return core->reg_base;
+}
+EXPORT_SYMBOL(mtk_venc_get_core_reg_addr);
 
 int mtk_vcodec_mem_alloc(struct mtk_vcodec_ctx *data,
 			struct mtk_vcodec_mem *mem)
