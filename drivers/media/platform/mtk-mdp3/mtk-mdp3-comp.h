@@ -93,12 +93,12 @@ enum mdp_comp_event {
 	WROT1_SOF,
 	WROT2_SOF,
 	WROT3_SOF,
-	RDMA1_FRAME_DONE,
-	RDMA2_FRAME_DONE,
-	RDMA3_FRAME_DONE,
-	WROT1_FRAME_DONE,
-	WROT2_FRAME_DONE,
-	WROT3_FRAME_DONE,
+	RDMA1_DONE,
+	RDMA2_DONE,
+	RDMA3_DONE,
+	WROT1_DONE,
+	WROT2_DONE,
+	WROT3_DONE,
 
 	ISP_P2_0_DONE,
 	ISP_P2_1_DONE,
@@ -157,6 +157,16 @@ struct mdp_comp_data {
 	struct mdp_comp_match match;
 	struct mdp_comp_info info;
 	struct mdp_mutex_info mutex;
+};
+
+struct hyfbc_init_info {
+	bool is10b;
+	u32 width_in_mb;
+	u32 height_in_mb;
+	u32 w_stride_in_mb;
+	u32 h_stride_in_mb;
+	u32 byte_per_mb;
+	u32 pa_base;
 };
 
 struct mdp_comp_ops;

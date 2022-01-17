@@ -15,6 +15,7 @@
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
 #include "mt8183_mdp.h"
+#include "mt8195_mdp.h"
 
 static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.mdp_cfg = &mt8183_plat_cfg,
@@ -25,6 +26,18 @@ static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.pipe_info_len = ARRAY_SIZE(mt8183_pipe_info),
 	.format = mt8183_formats,
 	.format_len = ARRAY_SIZE(mt8183_formats),
+};
+
+static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
+	.mdp_cfg = &mt8195_plat_cfg,
+	.event = mt8195_mdp_event,
+	.event_len = ARRAY_SIZE(mt8195_mdp_event),
+	.comp_data = mt8195_mdp_comp_data,
+	.pipe_info = mt8195_pipe_info,
+	.pipe_info_len = ARRAY_SIZE(mt8195_pipe_info),
+	.format = mt8195_formats,
+	.format_len = ARRAY_SIZE(mt8195_formats),
+	.config_table = mt8195_mdp_mmsys_config_table,
 };
 
 static const struct of_device_id mdp_of_ids[] = {

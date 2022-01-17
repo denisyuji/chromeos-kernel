@@ -920,6 +920,126 @@ static const struct of_device_id mdp_comp_dt_ids[] = {
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-wdma",
 		.data = (void *)MDP_COMP_WDMA,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-rdma1",
+		.data = (void *)MDP_COMP_RDMA1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-rdma2",
+		.data = (void *)MDP_COMP_RDMA2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-rdma3",
+		.data = (void *)MDP_COMP_RDMA3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-wrot1",
+		.data = (void *)MDP_COMP_WROT1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-wrot2",
+		.data = (void *)MDP_COMP_WROT2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-wrot3",
+		.data = (void *)MDP_COMP_WROT3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-split",
+		.data = (void *)MDP_COMP_SPLIT,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-stitch",
+		.data = (void *)MDP_COMP_STITCH,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-fg0",
+		.data = (void *)MDP_COMP_FG0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-fg1",
+		.data = (void *)MDP_COMP_FG1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-fg2",
+		.data = (void *)MDP_COMP_FG2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-fg3",
+		.data = (void *)MDP_COMP_FG3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-hdr0",
+		.data = (void *)MDP_COMP_HDR0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-hdr1",
+		.data = (void *)MDP_COMP_HDR1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-hdr2",
+		.data = (void *)MDP_COMP_HDR2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-hdr3",
+		.data = (void *)MDP_COMP_HDR3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-aal0",
+		.data = (void *)MDP_COMP_AAL0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-aal1",
+		.data = (void *)MDP_COMP_AAL1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-aal2",
+		.data = (void *)MDP_COMP_AAL2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-aal3",
+		.data = (void *)MDP_COMP_AAL3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-rsz2",
+		.data = (void *)MDP_COMP_RSZ2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-rsz3",
+		.data = (void *)MDP_COMP_RSZ3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-merge2",
+		.data = (void *)MDP_COMP_MERGE2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-merge3",
+		.data = (void *)MDP_COMP_MERGE3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tdshp0",
+		.data = (void *)MDP_COMP_TDSHP0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tdshp1",
+		.data = (void *)MDP_COMP_TDSHP1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tdshp2",
+		.data = (void *)MDP_COMP_TDSHP2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tdshp3",
+		.data = (void *)MDP_COMP_TDSHP3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-color0",
+		.data = (void *)MDP_COMP_COLOR0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-color1",
+		.data = (void *)MDP_COMP_COLOR1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-color2",
+		.data = (void *)MDP_COMP_COLOR2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-color3",
+		.data = (void *)MDP_COMP_COLOR3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-ovl0",
+		.data = (void *)MDP_COMP_OVL0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-ovl1",
+		.data = (void *)MDP_COMP_OVL1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-pad0",
+		.data = (void *)MDP_COMP_PAD0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-pad1",
+		.data = (void *)MDP_COMP_PAD1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-pad2",
+		.data = (void *)MDP_COMP_PAD2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-pad3",
+		.data = (void *)MDP_COMP_PAD3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tcc0",
+		.data = (void *)MDP_COMP_TCC0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tcc1",
+		.data = (void *)MDP_COMP_TCC1,
 	},
 	{}
 };
@@ -938,10 +1058,34 @@ static const struct of_device_id mdp_sub_comp_dt_ids[] = {
 		.compatible = "mediatek,mt8183-mdp3-exto",
 		.data = (void *)MDP_COMP_ISP_IMGO,
 	}, {
+		.compatible = "mediatek,mt8195-mdp3-path1",
+		.data = (void *)MDP_COMP_VPP0_SOUT,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path2",
+		.data = (void *)MDP_COMP_VPP1_SOUT,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path3",
+		.data = (void *)MDP_COMP_VDO0DL0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path4",
+		.data = (void *)MDP_COMP_VDO1DL0,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path5",
+		.data = (void *)MDP_COMP_VDO0DL1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path6",
+		.data = (void *)MDP_COMP_VDO1DL1,
+	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl1",
 		.data = (void *)MDP_COMP_CAMIN,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl2",
+		.data = (void *)MDP_COMP_CAMIN2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl1",
+		.data = (void *)MDP_COMP_CAMIN,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl2",
 		.data = (void *)MDP_COMP_CAMIN2,
 	},
 	{}
