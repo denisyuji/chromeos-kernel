@@ -14,6 +14,7 @@
 #include "venc_drv_if.h"
 
 #include "mtk_vcodec_enc.h"
+#include "mtk_vcodec_enc_core.h"
 #include "mtk_vcodec_enc_pm.h"
 
 int venc_if_init(struct mtk_vcodec_ctx *ctx, unsigned int fourcc)
@@ -31,9 +32,9 @@ int venc_if_init(struct mtk_vcodec_ctx *ctx, unsigned int fourcc)
 		return -EINVAL;
 	}
 
-	mtk_venc_lock(ctx);
+	mtk_venc_lock(ctx, ctx->core_id);
 	ret = ctx->enc_if->init(ctx);
-	mtk_venc_unlock(ctx);
+	mtk_venc_unlock(ctx, ctx->core_id);
 
 	return ret;
 }
@@ -43,9 +44,9 @@ int venc_if_set_param(struct mtk_vcodec_ctx *ctx,
 {
 	int ret = 0;
 
-	mtk_venc_lock(ctx);
+	mtk_venc_lock(ctx, ctx->core_id);
 	ret = ctx->enc_if->set_param(ctx->drv_handle, type, in);
-	mtk_venc_unlock(ctx);
+	mtk_venc_unlock(ctx, ctx->core_id);
 
 	return ret;
 }
@@ -56,24 +57,14 @@ int venc_if_encode(struct mtk_vcodec_ctx *ctx,
 		   struct venc_done_result *result)
 {
 	int ret = 0;
-	unsigned long flags;
 
-	mtk_venc_lock(ctx);
+	venc_encode_prepare(ctx, opt);
 
-	spin_lock_irqsave(&ctx->dev->irqlock, flags);
-	ctx->dev->curr_ctx = ctx;
-	spin_unlock_irqrestore(&ctx->dev->irqlock, flags);
-
-	mtk_vcodec_enc_clock_on(ctx->dev, 0);
 	ret = ctx->enc_if->encode(ctx->drv_handle, opt, frm_buf,
 				  bs_buf, result);
-	mtk_vcodec_enc_clock_off(ctx->dev, 0);
 
-	spin_lock_irqsave(&ctx->dev->irqlock, flags);
-	ctx->dev->curr_ctx = NULL;
-	spin_unlock_irqrestore(&ctx->dev->irqlock, flags);
+	venc_encode_unprepare(ctx, opt);
 
-	mtk_venc_unlock(ctx);
 	return ret;
 }
 
@@ -84,11 +75,57 @@ int venc_if_deinit(struct mtk_vcodec_ctx *ctx)
 	if (!ctx->drv_handle)
 		return 0;
 
-	mtk_venc_lock(ctx);
+	mtk_venc_lock(ctx, ctx->core_id);
 	ret = ctx->enc_if->deinit(ctx->drv_handle);
-	mtk_venc_unlock(ctx);
+	mtk_venc_unlock(ctx, ctx->core_id);
 
 	ctx->drv_handle = NULL;
 
 	return ret;
+}
+
+void venc_encode_prepare(struct mtk_vcodec_ctx *ctx,
+			 enum venc_start_opt opt)
+{
+	unsigned long flags;
+	struct mtk_venc_core_dev *core;
+
+	if (ctx->dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		if (ctx->enc_idx & 0x01)
+			ctx->core_id = MTK_VENC_CORE1;
+		else
+			ctx->core_id = MTK_VENC_CORE0;
+	} else {
+		ctx->core_id = MTK_VENC_CORE0;
+	}
+	mtk_venc_lock(ctx, ctx->core_id);
+
+	spin_lock_irqsave(&ctx->dev->irqlock, flags);
+
+	if (ctx->dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		core = ctx->dev->enc_core_dev[ctx->core_id];
+
+		core->curr_ctx = ctx;
+	} else {
+		ctx->dev->curr_ctx = ctx;
+	}
+
+	spin_unlock_irqrestore(&ctx->dev->irqlock, flags);
+
+	mtk_vcodec_enc_clock_on(ctx->dev, ctx->core_id);
+}
+
+void venc_encode_unprepare(struct mtk_vcodec_ctx *ctx,
+			   enum venc_start_opt opt)
+{
+	unsigned long flags;
+
+	if (ctx->dev->venc_pdata->core_mode == VENC_SINGLE_CORE_MODE ||
+	    opt == VENC_START_OPT_ENCODE_SEQUENCE_HEADER) {
+		mtk_vcodec_enc_clock_off(ctx->dev, ctx->core_id);
+		spin_lock_irqsave(&ctx->dev->irqlock, flags);
+		ctx->dev->curr_ctx = NULL;
+		spin_unlock_irqrestore(&ctx->dev->irqlock, flags);
+		mtk_venc_unlock(ctx, ctx->core_id);
+	}
 }

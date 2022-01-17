@@ -305,6 +305,9 @@ struct vdec_pic_info {
  * @max_width: hardware supported max width
  * @max_height: hardware supported max height
  * @msg_queue: msg queue used to store lat buffer information.
+ * @q_mutex: src & dst vb2_queue mutex
+ * @enc_idx: used to record encoded frame count
+ * @core_id: used to reoord used core
  */
 struct mtk_vcodec_ctx {
 	enum mtk_instance_type type;
@@ -353,6 +356,10 @@ struct mtk_vcodec_ctx {
 	unsigned int max_width;
 	unsigned int max_height;
 	struct vdec_msg_queue msg_queue;
+
+	struct mutex q_mutex;
+	int enc_idx;
+	int core_id;
 };
 
 /*
@@ -530,7 +537,9 @@ struct mtk_vcodec_dev {
 
 	/* decoder hardware mutex lock */
 	struct mutex dec_mutex[MTK_VDEC_HW_MAX];
-	struct mutex enc_mutex;
+
+	/* encoder core mutex lock */
+	struct mutex enc_mutex[MTK_VENC_CORE_MAX];
 
 	struct mtk_vcodec_pm pm;
 	unsigned int dec_capability;

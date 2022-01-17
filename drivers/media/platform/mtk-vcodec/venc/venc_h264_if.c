@@ -448,7 +448,8 @@ static int h264_encode_sps(struct venc_h264_inst *inst,
 
 	mtk_vcodec_debug_enter(inst);
 
-	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_SPS, NULL, bs_buf, NULL);
+	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_SPS,
+			     NULL, bs_buf, NULL, MTK_VENC_CORE0);
 	if (ret)
 		return ret;
 
@@ -474,7 +475,8 @@ static int h264_encode_pps(struct venc_h264_inst *inst,
 
 	mtk_vcodec_debug_enter(inst);
 
-	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_PPS, NULL, bs_buf, NULL);
+	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_PPS,
+			     NULL, bs_buf, NULL, MTK_VENC_CORE0);
 	if (ret)
 		return ret;
 
@@ -516,7 +518,8 @@ static int h264_encode_header(struct venc_h264_inst *inst,
 static int h264_encode_frame(struct venc_h264_inst *inst,
 			     struct venc_frm_buf *frm_buf,
 			     struct mtk_vcodec_mem *bs_buf,
-			     unsigned int *bs_size)
+			     unsigned int *bs_size,
+			     int core_id)
 {
 	int ret = 0;
 	unsigned int irq_status;
@@ -536,7 +539,8 @@ static int h264_encode_frame(struct venc_h264_inst *inst,
 	mtk_vcodec_debug(inst, "frm_count = %d,skip_frm_count =%d,frm_type=%d.\n",
 			 frame_info.frm_count, frame_info.skip_frm_count,
 			 frame_info.frm_type);
-	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_FRAME, frm_buf, bs_buf, &frame_info);
+	ret = vpu_enc_encode(&inst->vpu_inst, H264_BS_MODE_FRAME,
+			     frm_buf, bs_buf, &frame_info, core_id);
 	if (ret)
 		return ret;
 
@@ -664,7 +668,7 @@ static int h264_enc_encode(void *handle,
 
 		if (!inst->prepend_hdr) {
 			ret = h264_encode_frame(inst, frm_buf, bs_buf,
-						&result->bs_size);
+						&result->bs_size, ctx->core_id);
 			if (ret)
 				goto encode_err;
 			result->is_key_frm = inst->vpu_inst.is_key_frm;
@@ -692,7 +696,7 @@ static int h264_enc_encode(void *handle,
 		tmp_bs_buf.size = bs_buf->size - (hdr_sz + filler_sz);
 
 		ret = h264_encode_frame(inst, frm_buf, &tmp_bs_buf,
-					&bs_size_frm);
+					&bs_size_frm, ctx->core_id);
 		if (ret)
 			goto encode_err;
 
