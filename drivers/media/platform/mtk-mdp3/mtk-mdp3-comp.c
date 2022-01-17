@@ -8,6 +8,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/pm_runtime.h>
+#include <linux/soc/mediatek/mtk-mmsys.h>
 #include "mtk-mdp3-comp.h"
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-regs.h"

@@ -105,6 +105,9 @@ struct mtk_mmsys_driver_data {
 	const unsigned int *mdp_isp_ctrl;
 	const struct mtk_mmsys_config *config;
 	const unsigned int num_configs;
+	const u32 *mdp_mmsys_configs;
+	const unsigned int mdp_num_mmsys_configs;
+	bool vppsys;
 	u32 sw_reset_start;
 	u32 num_resets;
 };

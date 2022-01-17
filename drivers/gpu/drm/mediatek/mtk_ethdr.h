@@ -6,8 +6,6 @@
 #ifndef __MTK_ETHDR_H__
 #define __MTK_ETHDR_H__
 
-#include <drm/mediatek_drm.h>
-
 void mtk_ethdr_start(struct device *dev);
 void mtk_ethdr_stop(struct device *dev);
 int mtk_ethdr_clk_enable(struct device *dev);
