@@ -24,6 +24,7 @@ static const struct mdp_platform_config mt8195_plat_cfg = {
 	.mdp_version_6885               = true,
 	.gce_event_offset               = 0,
 	.support_multi_larb		= true,
+	.support_dual_pipe              = true,
 };
 
 enum mt8195_mdp_comp_id {
