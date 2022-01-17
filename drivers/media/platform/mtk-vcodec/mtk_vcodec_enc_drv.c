@@ -231,10 +231,9 @@ static int mtk_vcodec_probe(struct platform_device *pdev)
 {
 	struct mtk_vcodec_dev *dev;
 	struct video_device *vfd_enc;
-	struct resource *res;
 	phandle rproc_phandle;
 	enum mtk_vcodec_fw_type fw_type;
-	int ret;
+	int ret, core_type;
 
 	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
@@ -260,39 +259,37 @@ static int mtk_vcodec_probe(struct platform_device *pdev)
 		return PTR_ERR(dev->fw_handler);
 
 	dev->venc_pdata = of_device_get_match_data(&pdev->dev);
-	ret = mtk_vcodec_init_enc_clk(dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Failed to get mtk vcodec clock source!");
-		goto err_enc_pm;
-	}
+	core_type = dev->venc_pdata->core_type;
 
-	pm_runtime_enable(&pdev->dev);
+	if (dev->venc_pdata->core_mode == VENC_SINGLE_CORE_MODE) {
+		ret = mtk_vcodec_init_enc_clk(dev);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"Failed to get mtk vcodec clock source!");
+			goto err_enc_pm;
+		}
 
-	dev->reg_base[dev->venc_pdata->core_type] =
-		devm_platform_ioremap_resource(pdev, 0);
-	if (IS_ERR(dev->reg_base[dev->venc_pdata->core_type])) {
-		ret = PTR_ERR(dev->reg_base[dev->venc_pdata->core_type]);
-		goto err_res;
-	}
+		pm_runtime_enable(&pdev->dev);
 
-	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (res == NULL) {
-		dev_err(&pdev->dev, "failed to get irq resource");
-		ret = -ENOENT;
-		goto err_res;
-	}
+		dev->reg_base[core_type] =
+			devm_platform_ioremap_resource(pdev, 0);
+		if (IS_ERR(dev->reg_base[core_type])) {
+			ret = PTR_ERR(dev->reg_base[core_type]);
+			goto err_res;
+		}
 
-	dev->enc_irq = platform_get_irq(pdev, 0);
-	irq_set_status_flags(dev->enc_irq, IRQ_NOAUTOEN);
-	ret = devm_request_irq(&pdev->dev, dev->enc_irq,
-			       mtk_vcodec_enc_irq_handler,
-			       0, pdev->name, dev);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"Failed to install dev->enc_irq %d (%d) core_type (%d)",
-			dev->enc_irq, ret, dev->venc_pdata->core_type);
-		ret = -EINVAL;
-		goto err_res;
+		dev->enc_irq = platform_get_irq(pdev, 0);
+		irq_set_status_flags(dev->enc_irq, IRQ_NOAUTOEN);
+		ret = devm_request_irq(&pdev->dev, dev->enc_irq,
+				       mtk_vcodec_enc_irq_handler,
+				       0, pdev->name, dev);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to install irq %d (%d) core_type (%d)",
+				dev->enc_irq, ret, core_type);
+			ret = -EINVAL;
+			goto err_res;
+		}
 	}
 
 	mutex_init(&dev->enc_mutex);
@@ -358,8 +355,17 @@ static int mtk_vcodec_probe(struct platform_device *pdev)
 		goto err_enc_reg;
 	}
 
+	if (dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		ret = of_platform_populate(pdev->dev.of_node,
+					   NULL, NULL, &pdev->dev);
+		if (ret) {
+			mtk_v4l2_err("Venc main device populate failed");
+			goto err_enc_reg;
+		}
+	}
+
 	mtk_v4l2_debug(0, "encoder %d registered as /dev/video%d",
-		       dev->venc_pdata->core_type, vfd_enc->num);
+		       core_type, vfd_enc->num);
 
 	return 0;
 
@@ -372,7 +378,8 @@ err_enc_mem_init:
 err_enc_alloc:
 	v4l2_device_unregister(&dev->v4l2_dev);
 err_res:
-	pm_runtime_disable(dev->pm.dev);
+	if (dev->venc_pdata->core_mode == VENC_SINGLE_CORE_MODE)
+		pm_runtime_disable(dev->pm.dev);
 err_enc_pm:
 	mtk_vcodec_fw_release(dev->fw_handler);
 	return ret;
@@ -386,6 +393,7 @@ static const struct mtk_vcodec_enc_pdata mt8173_avc_pdata = {
 	.min_bitrate = 64,
 	.max_bitrate = 60000000,
 	.core_type = VENC_SYS,
+	.core_mode = VENC_SINGLE_CORE_MODE,
 };
 
 static const struct mtk_vcodec_enc_pdata mt8173_vp8_pdata = {
@@ -396,6 +404,7 @@ static const struct mtk_vcodec_enc_pdata mt8173_vp8_pdata = {
 	.min_bitrate = 64,
 	.max_bitrate = 9000000,
 	.core_type = VENC_LT_SYS,
+	.core_mode = VENC_SINGLE_CORE_MODE,
 };
 
 static const struct mtk_vcodec_enc_pdata mt8183_pdata = {
@@ -407,6 +416,7 @@ static const struct mtk_vcodec_enc_pdata mt8183_pdata = {
 	.min_bitrate = 64,
 	.max_bitrate = 40000000,
 	.core_type = VENC_SYS,
+	.core_mode = VENC_SINGLE_CORE_MODE,
 };
 
 static const struct mtk_vcodec_enc_pdata mt8192_pdata = {
@@ -418,6 +428,7 @@ static const struct mtk_vcodec_enc_pdata mt8192_pdata = {
 	.min_bitrate = 64,
 	.max_bitrate = 100000000,
 	.core_type = VENC_SYS,
+	.core_mode = VENC_SINGLE_CORE_MODE,
 };
 
 static const struct mtk_vcodec_enc_pdata mt8195_pdata = {
@@ -429,6 +440,7 @@ static const struct mtk_vcodec_enc_pdata mt8195_pdata = {
 	.min_bitrate = 64,
 	.max_bitrate = 100000000,
 	.core_type = VENC_SYS,
+	.core_mode = VENC_DUAL_CORE_MODE,
 };
 
 static const struct of_device_id mtk_vcodec_enc_match[] = {
@@ -456,7 +468,8 @@ static int mtk_vcodec_enc_remove(struct platform_device *pdev)
 		video_unregister_device(dev->vfd_enc);
 
 	v4l2_device_unregister(&dev->v4l2_dev);
-	pm_runtime_disable(dev->pm.dev);
+	if (dev->venc_pdata->core_mode == VENC_SINGLE_CORE_MODE)
+		pm_runtime_disable(dev->pm.dev);
 	mtk_vcodec_fw_release(dev->fw_handler);
 	return 0;
 }

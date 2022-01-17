@@ -118,6 +118,23 @@ enum mtk_vdec_hw_count {
 };
 
 /*
+ * enum mtk_venc_core_id -- encoder core id
+ */
+enum mtk_venc_core_id {
+	MTK_VENC_CORE0 = 0,
+	MTK_VENC_CORE1 = 1,
+	MTK_VENC_CORE_MAX,
+};
+
+/**
+ * enmu mtk_venc_core_mode - Used to indicate different encode mode
+ */
+enum mtk_venc_core_mode {
+	VENC_SINGLE_CORE_MODE = 0,
+	VENC_DUAL_CORE_MODE = 1,
+};
+
+/*
  * struct mtk_video_fmt - Structure used to store information about pixelformats
  */
 struct mtk_video_fmt {
@@ -417,6 +434,7 @@ struct mtk_vcodec_dec_pdata {
  * @output_formats: array of supported output formats
  * @num_output_formats: number of entries in output_formats
  * @core_type: stand for h264 or vp8 encode
+ * @core_mode: indicate encode core mode
  */
 struct mtk_vcodec_enc_pdata {
 	bool uses_ext;
@@ -427,6 +445,7 @@ struct mtk_vcodec_enc_pdata {
 	const struct mtk_video_fmt *output_formats;
 	size_t num_output_formats;
 	int core_type;
+	enum mtk_venc_core_mode core_mode;
 };
 
 #define MTK_ENC_CTX_IS_EXT(ctx) ((ctx)->dev->venc_pdata->uses_ext)
@@ -476,6 +495,7 @@ struct mtk_vcodec_enc_pdata {
  * @subdev_dev: subdev hardware device
  * @subdev_prob_done: check whether all used hw device is prob done
  * @subdev_bitmap: used to record hardware is ready or not
+ * @enc_core_dev: used to store venc core device
  */
 struct mtk_vcodec_dev {
 	struct v4l2_device v4l2_dev;
@@ -521,6 +541,8 @@ struct mtk_vcodec_dev {
 	void *subdev_dev[MTK_VDEC_HW_MAX];
 	int (*subdev_prob_done)(struct mtk_vcodec_dev *vdec_dev);
 	DECLARE_BITMAP(subdev_bitmap, MTK_VDEC_HW_MAX);
+
+	void *enc_core_dev[MTK_VENC_CORE_MAX];
 };
 
 static inline struct mtk_vcodec_ctx *fh_to_ctx(struct v4l2_fh *fh)
