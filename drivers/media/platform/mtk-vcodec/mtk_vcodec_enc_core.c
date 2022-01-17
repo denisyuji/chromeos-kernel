@@ -14,6 +14,11 @@
 #include "mtk_vcodec_enc.h"
 #include "mtk_vcodec_enc_core.h"
 #include "mtk_vcodec_enc_pm.h"
+#include "mtk_vcodec_intr.h"
+
+#define VENC_PIC_BITSTREAM_BYTE_CNT 0x0098
+#define VENC_PIC_FRM_TYPE	0x0010
+#define VENC_PIC_KEY_FRM	0x2
 
 static const struct of_device_id mtk_venc_core_ids[] = {
 	{
@@ -47,6 +52,7 @@ static void clean_irq_status(unsigned int irq_status, void __iomem *addr)
 
 	if (irq_status & MTK_VENC_IRQ_STATUS_FRM)
 		writel(MTK_VENC_IRQ_STATUS_FRM, addr);
+
 }
 
 static irqreturn_t mtk_enc_core_irq_handler(int irq, void *priv)
@@ -55,6 +61,9 @@ static irqreturn_t mtk_enc_core_irq_handler(int irq, void *priv)
 	struct mtk_vcodec_ctx *ctx;
 	unsigned long flags;
 	void __iomem *addr;
+	unsigned int bs_size;
+	unsigned int frm_type;
+	bool is_key_frame = 0;
 
 	spin_lock_irqsave(&core->main_dev->irqlock, flags);
 	ctx = core->curr_ctx;
@@ -66,9 +75,25 @@ static irqreturn_t mtk_enc_core_irq_handler(int irq, void *priv)
 
 	addr = core->reg_base + MTK_VENC_IRQ_ACK_OFFSET;
 	ctx->irq_status = readl(core->reg_base + MTK_VENC_IRQ_STATUS_OFFSET);
+	bs_size = readl(core->reg_base + VENC_PIC_BITSTREAM_BYTE_CNT);
+	frm_type = readl(core->reg_base + VENC_PIC_FRM_TYPE);
 	clean_irq_status(ctx->irq_status, addr);
 
-	wake_up_ctx(ctx, MTK_INST_IRQ_RECEIVED, 0);
+	if (ctx->irq_status & MTK_VENC_IRQ_STATUS_FRM) {
+		if (ctx->hdr_size != 0) {
+			bs_size += ctx->hdr_size;
+			ctx->hdr_size = 0;
+		}
+		if (frm_type & VENC_PIC_KEY_FRM)
+			is_key_frame = 1;
+
+		mtk_venc_buf_done(ctx, core->core_id, bs_size, 0, is_key_frame);
+		mtk_vcodec_enc_clock_off(core->main_dev, core->core_id);
+		mtk_venc_unlock(ctx, core->core_id);
+	} else {
+		wake_up_ctx(ctx, MTK_INST_IRQ_RECEIVED, 0);
+	}
+
 	return IRQ_HANDLED;
 }
 

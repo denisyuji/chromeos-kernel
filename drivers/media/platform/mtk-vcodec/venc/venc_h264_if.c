@@ -558,6 +558,12 @@ static int h264_encode_frame(struct venc_h264_inst *inst,
 		return ret;
 	}
 
+	if (is_dual_core) {
+		++inst->frm_cnt;
+		mtk_vcodec_debug(inst, "dual core : frm %d <-", inst->frm_cnt);
+		return ret;
+	}
+
 	irq_status = h264_enc_wait_venc_done(inst);
 	if (irq_status != MTK_VENC_IRQ_STATUS_FRM) {
 		mtk_vcodec_err(inst, "irq_status=%d failed", irq_status);
@@ -639,10 +645,12 @@ static int h264_enc_encode(void *handle,
 	int ret = 0;
 	struct venc_h264_inst *inst = (struct venc_h264_inst *)handle;
 	struct mtk_vcodec_ctx *ctx = inst->ctx;
+	bool is_single_core = (MTK_ENC_CORE_MODE(ctx) == VENC_SINGLE_CORE_MODE);
 
 	mtk_vcodec_debug(inst, "opt %d ->", opt);
 
-	enable_irq(ctx->dev->enc_irq);
+	if (is_single_core)
+		enable_irq(ctx->dev->enc_irq);
 
 	switch (opt) {
 	case VENC_START_OPT_ENCODE_SEQUENCE_HEADER: {
@@ -665,6 +673,13 @@ static int h264_enc_encode(void *handle,
 		struct mtk_vcodec_mem tmp_bs_buf;
 		unsigned int bs_size_hdr;
 		unsigned int bs_size_frm;
+
+		/*
+		 * the frm_buf and bs_buf need to be recorded into ctx,
+		 * when encoding done, the target buffer can be obtained
+		 */
+		ctx->pfrm_buf[ctx->core_id] = frm_buf->src_addr;
+		ctx->pbs_buf[ctx->core_id] = bs_buf->buf;
 
 		if (!inst->prepend_hdr) {
 			ret = h264_encode_frame(inst, frm_buf, bs_buf,
@@ -702,6 +717,8 @@ static int h264_enc_encode(void *handle,
 
 		result->bs_size = hdr_sz + filler_sz + bs_size_frm;
 
+		ctx->hdr_size = hdr_sz + filler_sz;
+
 		mtk_vcodec_debug(inst, "hdr %d filler %d frame %d bs %d",
 				 hdr_sz, filler_sz, bs_size_frm,
 				 result->bs_size);
@@ -718,8 +735,9 @@ static int h264_enc_encode(void *handle,
 	}
 
 encode_err:
+	if (is_single_core)
+		disable_irq(ctx->dev->enc_irq);
 
-	disable_irq(ctx->dev->enc_irq);
 	mtk_vcodec_debug(inst, "opt %d <-", opt);
 
 	return ret;

@@ -308,6 +308,9 @@ struct vdec_pic_info {
  * @q_mutex: src & dst vb2_queue mutex
  * @enc_idx: used to record encoded frame count
  * @core_id: used to reoord used core
+ * @pfrm_buf: used to store current ctx's frame buffer
+ * @pbs_buf: used to store current ctx's bitstream buffer
+ * @hdr_size: used to store prepend header size
  */
 struct mtk_vcodec_ctx {
 	enum mtk_instance_type type;
@@ -360,6 +363,9 @@ struct mtk_vcodec_ctx {
 	struct mutex q_mutex;
 	int enc_idx;
 	int core_id;
+	struct vb2_v4l2_buffer *pfrm_buf[MTK_VENC_CORE_MAX];
+	struct vb2_v4l2_buffer *pbs_buf[MTK_VENC_CORE_MAX];
+	unsigned int hdr_size;
 };
 
 /*
