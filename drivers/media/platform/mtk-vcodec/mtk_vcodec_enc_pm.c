@@ -60,19 +60,50 @@ int mtk_vcodec_init_enc_clk(struct mtk_vcodec_dev *mtkdev)
 	return 0;
 }
 
-void mtk_vcodec_enc_clock_on(struct mtk_vcodec_pm *pm)
+void mtk_vcodec_enc_clock_on(struct mtk_vcodec_dev *dev, int core_id)
 {
-	struct mtk_vcodec_clk *enc_clk = &pm->venc_clk;
+	struct mtk_venc_core_dev *core;
+	struct mtk_vcodec_pm *enc_pm;
+	struct mtk_vcodec_clk *enc_clk;
+	struct clk              *clk;
 	int ret, i = 0;
 
-	for (i = 0; i < enc_clk->clk_num; i++) {
-		ret = clk_prepare_enable(enc_clk->clk_info[i].vcodec_clk);
-		if (ret) {
-			mtk_v4l2_err("venc clk_prepare_enable %d %s fail %d", i,
-				enc_clk->clk_info[i].clk_name, ret);
-			goto clkerr;
+	if (dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[core_id];
+		enc_pm = &core->pm;
+		enc_clk = &enc_pm->venc_clk;
+
+		for (i = 0; i < enc_clk->clk_num; i++) {
+			clk = enc_clk->clk_info[i].vcodec_clk;
+			ret = clk_enable(clk);
+			if (ret) {
+				mtk_v4l2_err("clk_enable %d %s fail %d", i,
+					     enc_clk->clk_info[i].clk_name,
+					     ret);
+				goto core_clk_err;
+			}
+		}
+	} else {
+		enc_pm = &dev->pm;
+		enc_clk = &enc_pm->venc_clk;
+
+		for (i = 0; i < enc_clk->clk_num; i++) {
+			clk = enc_clk->clk_info[i].vcodec_clk;
+			ret = clk_prepare_enable(clk);
+			if (ret) {
+				mtk_v4l2_err("clk_prepare %d %s fail %d",
+					     i, enc_clk->clk_info[i].clk_name,
+					     ret);
+				goto clkerr;
+			}
 		}
 	}
+
+	return;
+
+core_clk_err:
+	for (i -= 1; i >= 0; i--)
+		clk_disable(enc_clk->clk_info[i].vcodec_clk);
 
 	return;
 
@@ -82,20 +113,35 @@ clkerr:
 }
 EXPORT_SYMBOL_GPL(mtk_vcodec_enc_clock_on);
 
-void mtk_vcodec_enc_clock_off(struct mtk_vcodec_pm *pm)
+void mtk_vcodec_enc_clock_off(struct mtk_vcodec_dev *dev, int core_id)
 {
-	struct mtk_vcodec_clk *enc_clk = &pm->venc_clk;
+	struct mtk_venc_core_dev *core;
+	struct mtk_vcodec_pm *enc_pm;
+	struct mtk_vcodec_clk *enc_clk;
 	int i = 0;
 
-	for (i = enc_clk->clk_num - 1; i >= 0; i--)
-		clk_disable_unprepare(enc_clk->clk_info[i].vcodec_clk);
+	if (dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[core_id];
+		enc_pm = &core->pm;
+		enc_clk = &enc_pm->venc_clk;
+
+		for (i = enc_clk->clk_num - 1; i >= 0; i--)
+			clk_disable(enc_clk->clk_info[i].vcodec_clk);
+	} else {
+		enc_pm = &dev->pm;
+		enc_clk = &enc_pm->venc_clk;
+
+		for (i = enc_clk->clk_num - 1; i >= 0; i--)
+			clk_disable_unprepare(enc_clk->clk_info[i].vcodec_clk);
+	}
 }
 EXPORT_SYMBOL_GPL(mtk_vcodec_enc_clock_off);
 
 int mtk_venc_core_pw_on(struct mtk_vcodec_dev *dev)
 {
-	int i, ret;
+	int i, ret, j = 0;
 	struct mtk_venc_core_dev *core;
+	struct mtk_vcodec_clk *clk;
 
 	/* power on all available venc cores */
 	for (i = 0; i < MTK_VENC_CORE_MAX; i++) {
@@ -108,12 +154,28 @@ int mtk_venc_core_pw_on(struct mtk_vcodec_dev *dev)
 			mtk_v4l2_err("power on core[%d] fail %d", i, ret);
 			goto pw_on_fail;
 		}
+
+		clk = &core->pm.venc_clk;
+		for (j = 0; j < clk->clk_num; j++) {
+			ret = clk_prepare(clk->clk_info[j].vcodec_clk);
+			if (ret) {
+				mtk_v4l2_err("prepare clk [%s] fail %d",
+					     clk->clk_info[j].clk_name,
+					     ret);
+				goto pw_on_fail;
+			}
+		}
 	}
 	return 0;
 
 pw_on_fail:
 	for (i -= 1; i >= 0; i--) {
 		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[i];
+
+		clk = &core->pm.venc_clk;
+		for (j -= 1; j >= 0; j--)
+			clk_unprepare(clk->clk_info[j].vcodec_clk);
+
 		pm_runtime_put_sync(&core->plat_dev->dev);
 	}
 	return ret;
@@ -121,14 +183,19 @@ pw_on_fail:
 
 int mtk_venc_core_pw_off(struct mtk_vcodec_dev *dev)
 {
-	int i, ret;
+	int i, ret, j;
 	struct mtk_venc_core_dev *core;
+	struct mtk_vcodec_clk *clk;
 
 	/* power off all available venc cores */
 	for (i = 0; i < MTK_VENC_CORE_MAX; i++) {
 		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[i];
 		if (!core)
 			return 0;
+
+		clk = &core->pm.venc_clk;
+		for (j = clk->clk_num - 1; j >= 0; j--)
+			clk_unprepare(clk->clk_info[j].vcodec_clk);
 
 		ret = pm_runtime_put_sync(&core->plat_dev->dev);
 		if (ret < 0)
