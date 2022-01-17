@@ -20,6 +20,36 @@
 #include "mdp_reg_wdma.h"
 #include "mdp_reg_isp.h"
 
+s32 get_comp_inner_id(struct mdp_dev *mdp_dev, enum mtk_mdp_comp_id id)
+{
+	if (!mdp_dev)
+		return MDP_COMP_NONE;
+	if (id <= MDP_COMP_NONE || id >= MDP_MAX_COMP_COUNT)
+		return MDP_COMP_NONE;
+
+	return mdp_dev->mdp_data->comp_data[id].match.inner_id;
+}
+
+enum mtk_mdp_comp_id get_comp_public_id(struct mdp_dev *mdp_dev, s32 inner_id)
+{
+	enum mtk_mdp_comp_id public_id = MDP_COMP_NONE;
+	u32 i;
+
+	if (IS_ERR(mdp_dev) || !inner_id)
+		goto err_public_id;
+
+	for (i = 0; i < MDP_MAX_COMP_COUNT; i++) {
+		if (mdp_dev->mdp_data->comp_data[i].match.inner_id == inner_id) {
+			public_id = i;
+			return public_id;
+		}
+	}
+
+err_public_id:
+	dev_err(&mdp_dev->pdev->dev, "Unmapped inner id %d", inner_id);
+	return public_id;
+}
+
 static const struct mdp_platform_config *__get_plat_cfg(const struct mdp_comp_ctx *ctx)
 {
 	if (!ctx)
@@ -31,12 +61,18 @@ static const struct mdp_platform_config *__get_plat_cfg(const struct mdp_comp_ct
 static s64 get_comp_flag(const struct mdp_comp_ctx *ctx)
 {
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
+	u32 rdma0, rsz1;
+
+	rdma0 = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_RDMA0);
+	rsz1 = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_RSZ1);
+	if (!rdma0 || !rsz1)
+		return MDP_COMP_NONE;
 
 	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing)
-		if (ctx->comp->id == MDP_COMP_RDMA0)
-			return BIT(MDP_COMP_RDMA0) | BIT(MDP_COMP_RSZ1);
+		if (ctx->comp->inner_id == rdma0)
+			return BIT(rdma0) | BIT(rsz1);
 
-	return BIT(ctx->comp->id);
+	return BIT(ctx->comp->inner_id);
 }
 
 static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
@@ -44,12 +80,17 @@ static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	s32 rdma0;
 
-	if (mdp_cfg && mdp_cfg->rdma_support_10bit) {
+	rdma0 = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_RDMA0);
+	if (!rdma0)
+		return -EINVAL;
+
+	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing) {
 		struct mdp_comp *prz1 = ctx->comp->mdp_dev->comp[MDP_COMP_RSZ1];
 
 		/* Disable RSZ1 */
-		if (ctx->comp->id == MDP_COMP_RDMA0 && prz1)
+		if (ctx->comp->inner_id == rdma0 && prz1)
 			MM_REG_WRITE(cmd, subsys_id, prz1->reg_base, PRZ_ENABLE,
 				     0x0, BIT(0));
 	}
@@ -189,14 +230,18 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 static int wait_rdma_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
+	enum mtk_mdp_comp_id id = ctx->comp->public_id;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	int evt = -1;
 
-	if (ctx->comp->alias_id == 0)
-		MM_REG_WAIT(cmd, RDMA0_DONE);
+	if (id == MDP_COMP_RDMA0)
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, RDMA0_DONE);
 	else
 		dev_err(dev, "Do not support RDMA1_DONE event\n");
 
+	if (evt > 0)
+		MM_REG_WAIT(cmd, evt);
 	/* Disable RDMA */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, 0x0, BIT(0));
 	return 0;
@@ -417,13 +462,18 @@ static int wait_wrot_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
+	enum mtk_mdp_comp_id id = ctx->comp->public_id;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	int evt = -1;
 
-	if (ctx->comp->alias_id == 0)
-		MM_REG_WAIT(cmd, WROT0_DONE);
+	if (id == MDP_COMP_WROT0)
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, WROT0_DONE);
 	else
 		dev_err(dev, "Do not support WROT1_DONE event\n");
+
+	if (evt > 0)
+		MM_REG_WAIT(cmd, evt);
 
 	if (mdp_cfg && mdp_cfg->wrot_filter_constraint)
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE, 0x0,
@@ -527,8 +577,11 @@ static int wait_wdma_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	int evt;
 
-	MM_REG_WAIT(cmd, WDMA0_DONE);
+	evt = mdp_get_event_idx(ctx->comp->mdp_dev, WDMA0_DONE);
+	if (evt > 0)
+		MM_REG_WAIT(cmd, evt);
 	/* Disable WDMA */
 	MM_REG_WRITE(cmd, subsys_id, base, WDMA_EN, 0x0, BIT(0));
 	return 0;
@@ -593,14 +646,20 @@ static int init_isp(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	struct device *dev = ctx->comp->mdp_dev->mdp_mmsys;
 	const struct isp_data *isp = &ctx->param->isp;
+	s32 camin, camin2;
+
+	camin = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_CAMIN);
+	camin2 = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_CAMIN2);
+	if (!camin || !camin2)
+		return -EINVAL;
 
 	/* Direct link */
-	if (isp->dl_flags & BIT(MDP_COMP_CAMIN)) {
+	if (isp->dl_flags & BIT(camin)) {
 		dev_dbg(dev, "SW_RST ASYNC");
 		mtk_mmsys_mdp_isp_ctrl(dev, cmd, MDP_COMP_CAMIN);
 	}
 
-	if (isp->dl_flags & BIT(MDP_COMP_CAMIN2)) {
+	if (isp->dl_flags & BIT(camin2)) {
 		dev_dbg(dev, "SW_RST ASYNC2");
 		mtk_mmsys_mdp_isp_ctrl(dev, cmd, MDP_COMP_CAMIN2);
 	}
@@ -712,68 +771,77 @@ static int wait_isp_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	int evt;
+	s32 camin, camin2;
+
+	camin = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_CAMIN);
+	camin2 = get_comp_inner_id(ctx->comp->mdp_dev, MDP_COMP_CAMIN2);
+	if (!camin || !camin2)
+		return MDP_COMP_NONE;
 
 	/* MDP_DL_SEL: select MDP_CROP */
-	if (isp->dl_flags & BIT(MDP_COMP_CAMIN))
+	if (isp->dl_flags & BIT(camin))
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x30, 0x0, BIT(9));
 	/* MDP2_DL_SEL: select MDP_CROP2 */
-	if (isp->dl_flags & BIT(MDP_COMP_CAMIN2))
+	if (isp->dl_flags & BIT(camin2))
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x30, 0x0,
 				  BIT(10) | BIT(11));
 
 	switch (isp->cq_idx) {
 	case ISP_DRV_DIP_CQ_THRE0:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(0), BIT(0));
-		MM_REG_WAIT(cmd, ISP_P2_0_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_0_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE1:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(1), BIT(1));
-		MM_REG_WAIT(cmd, ISP_P2_1_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_1_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE2:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(2), BIT(2));
-		MM_REG_WAIT(cmd, ISP_P2_2_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_2_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE3:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(3), BIT(3));
-		MM_REG_WAIT(cmd, ISP_P2_3_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_3_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE4:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(4), BIT(4));
-		MM_REG_WAIT(cmd, ISP_P2_4_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_4_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE5:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(5), BIT(5));
-		MM_REG_WAIT(cmd, ISP_P2_5_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_5_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE6:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(6), BIT(6));
-		MM_REG_WAIT(cmd, ISP_P2_6_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_6_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE7:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(7), BIT(7));
-		MM_REG_WAIT(cmd, ISP_P2_7_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_7_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE8:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(8), BIT(8));
-		MM_REG_WAIT(cmd, ISP_P2_8_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_8_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE9:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(9), BIT(9));
-		MM_REG_WAIT(cmd, ISP_P2_9_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_9_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE10:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(10), BIT(10));
-		MM_REG_WAIT(cmd, ISP_P2_10_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_10_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE11:
 		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(11), BIT(11));
-		MM_REG_WAIT(cmd, ISP_P2_11_DONE);
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, ISP_P2_11_DONE);
 		break;
 	default:
 		dev_err(dev, "Do not support this cq (%d)", isp->cq_idx);
 		return -EINVAL;
 	}
+
+	MM_REG_WAIT(cmd, evt);
 
 	return 0;
 }
@@ -833,52 +901,25 @@ static const struct mdp_comp_ops *mdp_comp_ops[MDP_COMP_TYPE_COUNT] = {
 	[MDP_COMP_TYPE_DL_PATH2] =	&camin_ops,
 };
 
-struct mdp_comp_match {
-	enum mtk_mdp_comp_id id;
-	enum mdp_comp_type	type;
-	u32			alias_id;
-};
-
-static const struct mdp_comp_match mdp_comp_matches[MDP_MAX_COMP_COUNT] = {
-	[MDP_COMP_WPEI] =	{ MDP_COMP_WPEI, MDP_COMP_TYPE_WPEI, 0 },
-	[MDP_COMP_WPEO] =	{ MDP_COMP_WPEO, MDP_COMP_TYPE_EXTO, 2 },
-	[MDP_COMP_WPEI2] =	{ MDP_COMP_WPEI2, MDP_COMP_TYPE_WPEI, 1 },
-	[MDP_COMP_WPEO2] =	{ MDP_COMP_WPEO2, MDP_COMP_TYPE_EXTO, 3 },
-	[MDP_COMP_ISP_IMGI] =	{ MDP_COMP_ISP_IMGI, MDP_COMP_TYPE_IMGI, 0 },
-	[MDP_COMP_ISP_IMGO] =	{ MDP_COMP_ISP_IMGO, MDP_COMP_TYPE_EXTO, 0 },
-	[MDP_COMP_ISP_IMG2O] =	{ MDP_COMP_ISP_IMG2O, MDP_COMP_TYPE_EXTO, 1 },
-
-	[MDP_COMP_CAMIN] =	{ MDP_COMP_CAMIN, MDP_COMP_TYPE_DL_PATH1, 0 },
-	[MDP_COMP_CAMIN2] =	{ MDP_COMP_CAMIN2, MDP_COMP_TYPE_DL_PATH2, 1 },
-	[MDP_COMP_RDMA0] =	{ MDP_COMP_RDMA0, MDP_COMP_TYPE_RDMA, 0 },
-	[MDP_COMP_CCORR0] =	{ MDP_COMP_CCORR0, MDP_COMP_TYPE_CCORR, 0 },
-	[MDP_COMP_RSZ0] =	{ MDP_COMP_RSZ0, MDP_COMP_TYPE_RSZ, 0 },
-	[MDP_COMP_RSZ1] =	{ MDP_COMP_RSZ1, MDP_COMP_TYPE_RSZ, 1 },
-	[MDP_COMP_PATH0_SOUT] =	{ MDP_COMP_PATH0_SOUT, MDP_COMP_TYPE_PATH1, 0 },
-	[MDP_COMP_PATH1_SOUT] =	{ MDP_COMP_PATH1_SOUT, MDP_COMP_TYPE_PATH2, 1 },
-	[MDP_COMP_WROT0] =	{ MDP_COMP_WROT0, MDP_COMP_TYPE_WROT, 0 },
-	[MDP_COMP_WDMA] =	{ MDP_COMP_WDMA, MDP_COMP_TYPE_WDMA, 0 },
-};
-
 static const struct of_device_id mdp_comp_dt_ids[] = {
 	{
 		.compatible = "mediatek,mt8183-mdp3-rdma0",
-		.data = &mdp_comp_matches[MDP_COMP_RDMA0],
+		.data = (void *)MDP_COMP_RDMA0,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-ccorr",
-		.data = &mdp_comp_matches[MDP_COMP_CCORR0],
+		.data = (void *)MDP_COMP_CCORR0,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-rsz0",
-		.data = &mdp_comp_matches[MDP_COMP_RSZ0],
+		.data = (void *)MDP_COMP_RSZ0,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-rsz1",
-		.data = &mdp_comp_matches[MDP_COMP_RSZ1],
+		.data = (void *)MDP_COMP_RSZ1,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-wrot0",
-		.data = &mdp_comp_matches[MDP_COMP_WROT0],
+		.data = (void *)MDP_COMP_WROT0,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-wdma",
-		.data = &mdp_comp_matches[MDP_COMP_WDMA],
+		.data = (void *)MDP_COMP_WDMA,
 	},
 	{}
 };
@@ -886,45 +927,24 @@ static const struct of_device_id mdp_comp_dt_ids[] = {
 static const struct of_device_id mdp_sub_comp_dt_ids[] = {
 	{
 		.compatible = "mediatek,mt8183-mdp3-path1",
-		.data = &mdp_comp_matches[MDP_COMP_PATH0_SOUT],
+		.data = (void *)MDP_COMP_PATH0_SOUT,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-path2",
-		.data = &mdp_comp_matches[MDP_COMP_PATH1_SOUT],
+		.data = (void *)MDP_COMP_PATH1_SOUT,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-imgi",
-		.data = &mdp_comp_matches[MDP_COMP_ISP_IMGI],
+		.data = (void *)MDP_COMP_ISP_IMGI,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-exto",
-		.data = &mdp_comp_matches[MDP_COMP_ISP_IMGO],
+		.data = (void *)MDP_COMP_ISP_IMGO,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl1",
-		.data = &mdp_comp_matches[MDP_COMP_CAMIN],
+		.data = (void *)MDP_COMP_CAMIN,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl2",
-		.data = &mdp_comp_matches[MDP_COMP_CAMIN2],
+		.data = (void *)MDP_COMP_CAMIN2,
 	},
 	{}
-};
-
-/* Used to describe the item order in MDP property */
-struct mdp_comp_info {
-	u32	clk_num;
-	u32	clk_ofst;
-	u32	dts_reg_ofst;
-};
-
-static const struct mdp_comp_info mdp_comp_dt_info[MDP_COMP_TYPE_COUNT] = {
-	[MDP_COMP_TYPE_RDMA]		= {2, 0, 0},
-	[MDP_COMP_TYPE_RSZ]		= {1, 0, 0},
-	[MDP_COMP_TYPE_WROT]		= {1, 0, 0},
-	[MDP_COMP_TYPE_WDMA]		= {1, 0, 0},
-	[MDP_COMP_TYPE_PATH1]		= {0, 0, 2},
-	[MDP_COMP_TYPE_PATH2]		= {0, 0, 3},
-	[MDP_COMP_TYPE_CCORR]		= {1, 0, 0},
-	[MDP_COMP_TYPE_IMGI]		= {0, 0, 4},
-	[MDP_COMP_TYPE_EXTO]		= {0, 0, 4},
-	[MDP_COMP_TYPE_DL_PATH1]	= {2, 2, 1},
-	[MDP_COMP_TYPE_DL_PATH2]	= {2, 4, 1},
 };
 
 void mdp_comp_clock_on(struct device *dev, struct mdp_comp *comp)
@@ -936,7 +956,7 @@ void mdp_comp_clock_on(struct device *dev, struct mdp_comp *comp)
 		if (err < 0)
 			dev_err(dev,
 				"Failed to get power, err %d. type:%d id:%d\n",
-				err, comp->type, comp->id);
+				err, comp->type, comp->inner_id);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(comp->clks); i++) {
@@ -946,7 +966,7 @@ void mdp_comp_clock_on(struct device *dev, struct mdp_comp *comp)
 		if (err)
 			dev_err(dev,
 				"Failed to enable clk %d. type:%d id:%d\n",
-				i, comp->type, comp->id);
+				i, comp->type, comp->inner_id);
 	}
 }
 
@@ -980,7 +1000,7 @@ void mdp_comp_clocks_off(struct device *dev, struct mdp_comp *comps, int num)
 		mdp_comp_clock_off(dev, &comps[i]);
 }
 
-static int mdp_get_subsys_id(struct device *dev, struct device_node *node,
+static int mdp_get_subsys_id(struct mdp_dev *mdp, struct device *dev, struct device_node *node,
 			     struct mdp_comp *comp)
 {
 	struct platform_device *comp_pdev;
@@ -994,12 +1014,12 @@ static int mdp_get_subsys_id(struct device *dev, struct device_node *node,
 	comp_pdev = of_find_device_by_node(node);
 
 	if (!comp_pdev) {
-		dev_err(dev, "get comp_pdev fail! comp id=%d type=%d\n",
-			comp->id, comp->type);
+		dev_err(dev, "get comp_pdev fail! comp public id=%d, inner id = %d, type=%d\n",
+			comp->public_id, comp->inner_id, comp->type);
 		return -ENODEV;
 	}
 
-	index = mdp_comp_dt_info[comp->type].dts_reg_ofst;
+	index = mdp->mdp_data->comp_data[comp->public_id].info.dts_reg_ofst;
 	ret = cmdq_dev_get_client_reg(&comp_pdev->dev, &cmdq_reg, index);
 	if (ret != 0) {
 		dev_err(&comp_pdev->dev, "cmdq_dev_get_subsys fail!\n");
@@ -1017,8 +1037,9 @@ static void __mdp_comp_init(struct mdp_dev *mdp, struct device_node *node,
 {
 	struct resource res;
 	phys_addr_t base;
-	int index = mdp_comp_dt_info[comp->type].dts_reg_ofst;
+	int index;
 
+	index = mdp->mdp_data->comp_data[comp->public_id].info.dts_reg_ofst;
 	if (of_address_to_resource(node, index, &res) < 0)
 		base = 0L;
 	else
@@ -1042,14 +1063,15 @@ static int mdp_comp_init(struct mdp_dev *mdp, struct device_node *node,
 		return -EINVAL;
 	}
 
-	comp->type = mdp_comp_matches[id].type;
-	comp->id = mdp_comp_matches[id].id;
-	comp->alias_id = mdp_comp_matches[id].alias_id;
+	comp->public_id = id;
+	comp->type = mdp->mdp_data->comp_data[id].match.type;
+	comp->inner_id = mdp->mdp_data->comp_data[id].match.inner_id;
+	comp->alias_id = mdp->mdp_data->comp_data[id].match.alias_id;
 	comp->ops = mdp_comp_ops[comp->type];
 	__mdp_comp_init(mdp, node, comp);
 
-	clk_num = mdp_comp_dt_info[comp->type].clk_num;
-	clk_ofst = mdp_comp_dt_info[comp->type].clk_ofst;
+	clk_num = mdp->mdp_data->comp_data[id].info.clk_num;
+	clk_ofst = mdp->mdp_data->comp_data[id].info.clk_ofst;
 
 	for (i = 0; i < clk_num; i++) {
 		comp->clks[i] = of_clk_get(node, i + clk_ofst);
@@ -1057,14 +1079,14 @@ static int mdp_comp_init(struct mdp_dev *mdp, struct device_node *node,
 			break;
 	}
 
-	mdp_get_subsys_id(dev, node, comp);
+	mdp_get_subsys_id(mdp, dev, node, comp);
 
 	return 0;
 }
 
 static struct mdp_comp *mdp_comp_create(struct mdp_dev *mdp,
 					struct device_node *node,
-					enum mtk_mdp_comp_id id)
+					enum mtk_mdp_comp_id  id)
 {
 	struct device *dev = &mdp->pdev->dev;
 	struct mdp_comp *comp;
@@ -1085,8 +1107,8 @@ static struct mdp_comp *mdp_comp_create(struct mdp_dev *mdp,
 	mdp->comp[id] = comp;
 	mdp->comp[id]->mdp_dev = mdp;
 
-	dev_info(dev, "%s type:%d alias:%d id:%d base:%#x regs:%p\n",
-		 dev->of_node->name, comp->type, comp->alias_id, id,
+	dev_info(dev, "%s type:%d alias:%d public id:%d inner_id:%d base:%#x regs:%p\n",
+		 dev->of_node->name, comp->type, comp->alias_id, id, comp->inner_id,
 		 (u32)comp->reg_base, comp->regs);
 	return comp;
 }
@@ -1098,21 +1120,22 @@ static int mdp_sub_comps_create(struct mdp_dev *mdp, struct device_node *node)
 	int index = 0;
 
 	of_property_for_each_string(node, "mediatek,mdp3-comps", prop, name) {
-		const struct of_device_id *list = mdp_sub_comp_dt_ids;
-		struct mdp_comp_match *match = NULL;
+		const struct of_device_id *matches = mdp_sub_comp_dt_ids;
+		enum mtk_mdp_comp_id id = MDP_COMP_NONE;
 		struct mdp_comp *comp;
 
-		for (; list->compatible[0]; list++) {
-			if (of_compat_cmp(name, list->compatible,
-					  strlen(list->compatible)) == 0) {
-				match = (struct mdp_comp_match *)list->data;
+		for (; matches->compatible[0]; matches++) {
+			if (of_compat_cmp(name, matches->compatible,
+					  strlen(matches->compatible)) == 0) {
+				id = (enum mtk_mdp_comp_id)matches->data;
 				break;
 			}
 		}
 
-		if (match)
-			comp = mdp_comp_create(mdp, node, match->id);
+		if (id == MDP_COMP_NONE)
+			return -ENODEV;
 
+		comp = mdp_comp_create(mdp, node, id);
 		if (IS_ERR(comp))
 			return PTR_ERR(comp);
 
@@ -1134,8 +1157,8 @@ void mdp_component_deinit(struct mdp_dev *mdp)
 {
 	int i;
 
-	for (i = 0; i < MDP_PIPE_MAX; i++)
-		mtk_mutex_put(mdp->mdp_mutex[i]);
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++)
+		mtk_mutex_put(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].pipe_id]);
 
 	for (i = 0; i < ARRAY_SIZE(mdp->comp); i++) {
 		if (mdp->comp[i]) {
@@ -1157,7 +1180,7 @@ int mdp_component_init(struct mdp_dev *mdp)
 	/* Iterate over sibling MDP function blocks */
 	for_each_child_of_node(parent, node) {
 		const struct of_device_id *of_id;
-		struct mdp_comp_match *match;
+		enum mtk_mdp_comp_id id;
 		struct mdp_comp *comp;
 
 		of_id = of_match_node(mdp_comp_dt_ids, node);
@@ -1169,9 +1192,8 @@ int mdp_component_init(struct mdp_dev *mdp)
 			continue;
 		}
 
-		match = (struct mdp_comp_match *)of_id->data;
-
-		comp = mdp_comp_create(mdp, node, match->id);
+		id = (enum mtk_mdp_comp_id)of_id->data;
+		comp = mdp_comp_create(mdp, node, id);
 		if (IS_ERR(comp))
 			goto err_init_comps;
 
@@ -1208,16 +1230,15 @@ int mdp_comp_ctx_init(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 	const struct img_ipi_frameparam *frame)
 {
 	struct device *dev = &mdp->pdev->dev;
+	enum mtk_mdp_comp_id public_id = MDP_COMP_NONE;
 	int i;
 
-	if (param->type < 0 || param->type >= MDP_MAX_COMP_COUNT) {
-		dev_err(dev, "Invalid component id %d", param->type);
+	public_id = get_comp_public_id(mdp, param->type);
+	if (!public_id)
 		return -EINVAL;
-	}
-
-	ctx->comp = mdp->comp[param->type];
+	ctx->comp = mdp->comp[public_id];
 	if (!ctx->comp) {
-		dev_err(dev, "Uninit component id %d", param->type);
+		dev_err(dev, "Uninit component inner id %d", param->type);
 		return -EINVAL;
 	}
 

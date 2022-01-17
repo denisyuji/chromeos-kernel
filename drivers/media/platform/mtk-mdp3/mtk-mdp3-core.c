@@ -14,18 +14,17 @@
 #include <media/videobuf2-dma-contig.h>
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
-
-static const struct mdp_platform_config mt8183_plat_cfg = {
-	.rdma_support_10bit		= true,
-	.rdma_rsz1_sram_sharing		= true,
-	.rdma_upsample_repeat_only	= true,
-	.rsz_disable_dcm_small_sample	= false,
-	.wrot_filter_constraint		= false,
-	.gce_event_offset		= 2,
-};
+#include "mt8183_mdp.h"
 
 static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.mdp_cfg = &mt8183_plat_cfg,
+	.event = mt8183_mdp_event,
+	.event_len = ARRAY_SIZE(mt8183_mdp_event),
+	.comp_data = mt8183_mdp_comp_data,
+	.pipe_info = mt8183_pipe_info,
+	.pipe_info_len = ARRAY_SIZE(mt8183_pipe_info),
+	.format = mt8183_formats,
+	.format_len = ARRAY_SIZE(mt8183_formats),
 };
 
 static const struct of_device_id mdp_of_ids[] = {
@@ -140,7 +139,7 @@ static int mdp_probe(struct platform_device *pdev)
 	struct device_node *mdp_node;
 	struct platform_device *mm_pdev;
 	u32 event_ofst;
-	int ret, i;
+	int ret, i, mutex_id;
 
 	mdp = kzalloc(sizeof(*mdp), GFP_KERNEL);
 	if (!mdp) {
@@ -164,7 +163,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	event_ofst = mdp->mdp_data->mdp_cfg->gce_event_offset;
-	for (i = RDMA0_SOF; i < MDP_MAX_EVENT_COUNT; i++) {
+	for (i = 0; i < mdp->mdp_data->event_len; i++) {
 		s32 event_id;
 
 		if (!dev)
@@ -188,9 +187,15 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_return;
 	}
 
-	for (i = 0; i < MDP_PIPE_MAX; i++) {
-		mdp->mdp_mutex[i] = mtk_mutex_mdp_get(&mm_pdev->dev, i);
-		if (!mdp->mdp_mutex[i]) {
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
+		mutex_id = mdp->mdp_data->pipe_info[i].mutex_id;
+		if (mdp->mdp_mutex[mutex_id])
+			continue;
+
+		mdp->mdp_mutex[mutex_id] =
+			mtk_mutex_mdp_get(&mm_pdev->dev, mdp->mdp_data->pipe_info[i].pipe_id);
+
+		if (!mdp->mdp_mutex[mutex_id]) {
 			ret = -ENODEV;
 			goto err_return;
 		}
