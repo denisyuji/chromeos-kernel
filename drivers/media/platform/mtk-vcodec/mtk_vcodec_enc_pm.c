@@ -9,6 +9,7 @@
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
 
+#include "mtk_vcodec_enc_core.h"
 #include "mtk_vcodec_enc_pm.h"
 #include "mtk_vcodec_util.h"
 
@@ -90,3 +91,85 @@ void mtk_vcodec_enc_clock_off(struct mtk_vcodec_pm *pm)
 		clk_disable_unprepare(enc_clk->clk_info[i].vcodec_clk);
 }
 EXPORT_SYMBOL_GPL(mtk_vcodec_enc_clock_off);
+
+int mtk_venc_core_pw_on(struct mtk_vcodec_dev *dev)
+{
+	int i, ret;
+	struct mtk_venc_core_dev *core;
+
+	/* power on all available venc cores */
+	for (i = 0; i < MTK_VENC_CORE_MAX; i++) {
+		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[i];
+		if (!core)
+			return 0;
+
+		ret = pm_runtime_resume_and_get(&core->plat_dev->dev);
+		if (ret < 0) {
+			mtk_v4l2_err("power on core[%d] fail %d", i, ret);
+			goto pw_on_fail;
+		}
+	}
+	return 0;
+
+pw_on_fail:
+	for (i -= 1; i >= 0; i--) {
+		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[i];
+		pm_runtime_put_sync(&core->plat_dev->dev);
+	}
+	return ret;
+}
+
+int mtk_venc_core_pw_off(struct mtk_vcodec_dev *dev)
+{
+	int i, ret;
+	struct mtk_venc_core_dev *core;
+
+	/* power off all available venc cores */
+	for (i = 0; i < MTK_VENC_CORE_MAX; i++) {
+		core = (struct mtk_venc_core_dev *)dev->enc_core_dev[i];
+		if (!core)
+			return 0;
+
+		ret = pm_runtime_put_sync(&core->plat_dev->dev);
+		if (ret < 0)
+			mtk_v4l2_err("power off core[%d] fail %d", i, ret);
+	}
+	return ret;
+}
+
+int mtk_vcodec_enc_pw_on(struct mtk_vcodec_dev *dev)
+{
+	int ret;
+
+	if (dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		ret = mtk_venc_core_pw_on(dev);
+		if (ret < 0) {
+			mtk_v4l2_err("venc core power on fail: %d", ret);
+			return ret;
+		}
+	} else {
+		ret = pm_runtime_resume_and_get(&dev->plat_dev->dev);
+		if (ret < 0) {
+			mtk_v4l2_err("pm_runtime_resume_and_get fail %d", ret);
+			return ret;
+		}
+	}
+	return 0;
+}
+
+int mtk_vcodec_enc_pw_off(struct mtk_vcodec_dev *dev)
+{
+	int ret;
+
+	if (dev->venc_pdata->core_mode == VENC_DUAL_CORE_MODE) {
+		ret = mtk_venc_core_pw_off(dev);
+		if (ret < 0)
+			mtk_v4l2_err("venc core power off fail: %d", ret);
+
+	} else {
+		ret = pm_runtime_put_sync(&dev->plat_dev->dev);
+		if (ret < 0)
+			mtk_v4l2_err("pm_runtime_put_sync fail %d", ret);
+	}
+	return ret;
+}
