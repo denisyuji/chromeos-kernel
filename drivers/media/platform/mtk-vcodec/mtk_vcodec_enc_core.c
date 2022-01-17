@@ -13,6 +13,7 @@
 #include "mtk_vcodec_drv.h"
 #include "mtk_vcodec_enc.h"
 #include "mtk_vcodec_enc_core.h"
+#include "mtk_vcodec_enc_pm.h"
 
 static const struct of_device_id mtk_venc_core_ids[] = {
 	{
@@ -95,6 +96,13 @@ static int mtk_venc_core_probe(struct platform_device *pdev)
 
 	core->plat_dev = pdev;
 
+	ret = mtk_vcodec_init_enc_clk(core->plat_dev, &core->pm);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to get venc core clock source!");
+		return ret;
+	}
+	pm_runtime_enable(&pdev->dev);
+
 	core->reg_base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(core->reg_base)) {
 		dev_err(&pdev->dev, "Failed to get reg base");
@@ -137,6 +145,7 @@ static int mtk_venc_core_probe(struct platform_device *pdev)
 	return 0;
 
 err:
+	pm_runtime_disable(core->pm.dev);
 	return ret;
 }
 

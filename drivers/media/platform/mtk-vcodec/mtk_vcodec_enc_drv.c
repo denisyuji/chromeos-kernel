@@ -262,7 +262,7 @@ static int mtk_vcodec_probe(struct platform_device *pdev)
 	core_type = dev->venc_pdata->core_type;
 
 	if (dev->venc_pdata->core_mode == VENC_SINGLE_CORE_MODE) {
-		ret = mtk_vcodec_init_enc_clk(dev);
+		ret = mtk_vcodec_init_enc_clk(dev->plat_dev, &dev->pm);
 		if (ret < 0) {
 			dev_err(&pdev->dev,
 				"Failed to get mtk vcodec clock source!");
