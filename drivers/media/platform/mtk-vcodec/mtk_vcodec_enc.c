@@ -1431,6 +1431,7 @@ int mtk_venc_unlock(struct mtk_vcodec_ctx *ctx)
 	mutex_unlock(&dev->enc_mutex);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(mtk_venc_unlock);
 
 int mtk_venc_lock(struct mtk_vcodec_ctx *ctx)
 {
@@ -1439,6 +1440,7 @@ int mtk_venc_lock(struct mtk_vcodec_ctx *ctx)
 	mutex_lock(&dev->enc_mutex);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(mtk_venc_lock);
 
 void mtk_vcodec_enc_release(struct mtk_vcodec_ctx *ctx)
 {
