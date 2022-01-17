@@ -416,7 +416,7 @@ struct mtk_vcodec_dec_pdata {
  * @num_capture_formats: number of entries in capture_formats
  * @output_formats: array of supported output formats
  * @num_output_formats: number of entries in output_formats
- * @core_id: stand for h264 or vp8 encode index
+ * @core_type: stand for h264 or vp8 encode
  */
 struct mtk_vcodec_enc_pdata {
 	bool uses_ext;
@@ -426,7 +426,7 @@ struct mtk_vcodec_enc_pdata {
 	size_t num_capture_formats;
 	const struct mtk_video_fmt *output_formats;
 	size_t num_output_formats;
-	int core_id;
+	int core_type;
 };
 
 #define MTK_ENC_CTX_IS_EXT(ctx) ((ctx)->dev->venc_pdata->uses_ext)
