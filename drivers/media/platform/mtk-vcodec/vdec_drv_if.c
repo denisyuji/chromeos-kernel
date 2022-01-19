@@ -51,6 +51,10 @@ int vdec_if_init(struct mtk_vcodec_ctx *ctx, unsigned int fourcc)
 		ctx->dec_if = &vdec_vp9_slice_lat_if;
 		ctx->hw_id = MTK_VDEC_LAT0;
 		break;
+	case V4L2_PIX_FMT_AV1_FRAME:
+		ctx->dec_if = &vdec_av1_slice_lat_if;
+		ctx->hw_id = MTK_VDEC_LAT0;
+		break;
 	default:
 		return -EINVAL;
 	}

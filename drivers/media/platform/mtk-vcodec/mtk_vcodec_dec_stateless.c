@@ -107,12 +107,83 @@ static const struct mtk_stateless_control mtk_stateless_controls[] = {
 		},
 		.codec_type = V4L2_PIX_FMT_VP9_FRAME,
 	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_SEQUENCE,
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_FRAME_HEADER,
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_TILE_GROUP,
+			.dims = { V4L2_AV1_MAX_TILE_COUNT },
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY,
+			.dims = { V4L2_AV1_MAX_TILE_COUNT },
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_TILE_LIST,
+			.dims = { V4L2_AV1_MAX_TILE_COUNT },
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY,
+			.dims = { V4L2_AV1_MAX_TILE_COUNT },
+ 
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_OPERATING_MODE,
+
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_PROFILE,
+			.min = V4L2_STATELESS_AV1_PROFILE_MAIN,
+			.def = V4L2_STATELESS_AV1_PROFILE_MAIN,
+			.max = V4L2_STATELESS_AV1_PROFILE_PROFESSIONAL,
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
+	{
+		.cfg = {
+			.id = V4L2_CID_STATELESS_AV1_LEVEL,
+			.min = V4L2_STATELESS_AV1_LEVEL_2_0,
+			.def = V4L2_STATELESS_AV1_LEVEL_2_0,
+			.max = V4L2_STATELESS_AV1_LEVEL_7_3,
+		},
+		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(mtk_stateless_controls)
 
-static struct mtk_video_fmt mtk_video_formats[5];
-static struct mtk_codec_framesizes mtk_vdec_framesizes[3];
+static struct mtk_video_fmt mtk_video_formats[6];
+static struct mtk_codec_framesizes mtk_vdec_framesizes[4];
 
 static struct mtk_video_fmt default_out_format;
 static struct mtk_video_fmt default_cap_format;
@@ -172,10 +243,16 @@ static struct vdec_fb *vdec_get_cap_buffer(struct mtk_vcodec_ctx *ctx)
 		pfb->base_c.dma_addr =
 			vb2_dma_contig_plane_dma_addr(dst_buf, 1);
 		pfb->base_c.size = ctx->q_data[MTK_Q_DATA_DST].sizeimage[1];
+	} else if (ctx->q_data[MTK_Q_DATA_DST].fmt->num_planes == 1) {
+		pfb->base_c.va = pfb->base_y.va + ctx->picinfo.fb_sz[0];
+		pfb->base_c.dma_addr =
+			pfb->base_y.dma_addr + ctx->picinfo.fb_sz[0];
+		pfb->base_c.size = ctx->picinfo.fb_sz[1];
 	}
-	mtk_v4l2_debug(1, "id=%d Framebuf  pfb=%p VA=%p Y_DMA=%pad C_DMA=%pad Size=%zx frame_count = %d",
+	mtk_v4l2_debug(1, "id=%d Framebuf  pfb=%p VA=%p Y_DMA=%pad C_DMA=%pad Size=%zx %zx frame_count = %d",
 		       dst_buf->index, pfb, pfb->base_y.va, &pfb->base_y.dma_addr,
-		       &pfb->base_c.dma_addr, pfb->base_y.size, ctx->decoded_frame_cnt);
+		       &pfb->base_c.dma_addr, pfb->base_y.size, pfb->base_c.size,
+		       ctx->decoded_frame_cnt);
 
 	return pfb;
 }
@@ -342,6 +419,7 @@ static void mtk_vcodec_add_formats(unsigned int fourcc,
 	case V4L2_PIX_FMT_H264_SLICE:
 	case V4L2_PIX_FMT_VP8_FRAME:
 	case V4L2_PIX_FMT_VP9_FRAME:
+	case V4L2_PIX_FMT_AV1_FRAME:
 		mtk_video_formats[count_formats].fourcc = fourcc;
 		mtk_video_formats[count_formats].type = MTK_FMT_DEC;
 		mtk_video_formats[count_formats].num_planes = 1;
@@ -391,6 +469,10 @@ static void mtk_vcodec_get_supported_formats(struct mtk_vcodec_ctx *ctx)
 	}
 	if (ctx->dev->dec_capability & MTK_VDEC_FORMAT_VP9_FRAME) {
 		mtk_vcodec_add_formats(V4L2_PIX_FMT_VP9_FRAME, ctx);
+		out_format_count++;
+	}
+	if (ctx->dev->dec_capability & MTK_VDEC_FORMAT_AV1_FRAME) {
+		mtk_vcodec_add_formats(V4L2_PIX_FMT_AV1_FRAME, ctx);
 		out_format_count++;
 	}
 

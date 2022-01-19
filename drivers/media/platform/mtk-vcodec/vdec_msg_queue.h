@@ -53,6 +53,8 @@ struct vdec_msg_queue_ctx {
 struct vdec_lat_buf {
 	struct mtk_vcodec_mem wdma_err_addr;
 	struct mtk_vcodec_mem slice_bc_addr;
+	struct mtk_vcodec_mem rd_mv_addr;
+	struct mtk_vcodec_mem tile_addr;
 	struct vb2_v4l2_buffer ts_info;
 
 	void *private_data;
