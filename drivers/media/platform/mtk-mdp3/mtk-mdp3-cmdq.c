@@ -542,8 +542,8 @@ static int mdp_path_config_subfrm(struct mmsys_cmdq_cmd *cmd,
 				mmsys_dev = path->mdp_dev->mdp_mmsys;
 		}
 
-		mtk_mmsys_write_reg_by_cmdq(mmsys_dev, cmd,
-					    set->reg, set->value, 0xFFFFFFFF);
+		mtk_mmsys_write_reg(mmsys_dev, cmd,
+				    set->reg, set->value, 0xFFFFFFFF);
 	}
 	/* Config sub-frame information */
 	for (index = (config->num_components - 1); index >= 0; index--) {
@@ -593,8 +593,7 @@ static int mdp_path_config_subfrm(struct mmsys_cmdq_cmd *cmd,
 				mmsys_dev = path->mdp_dev->mdp_mmsys;
 		}
 
-		mtk_mmsys_write_reg_by_cmdq(mmsys_dev, cmd,
-					    set->reg, 0, 0xFFFFFFFF);
+		mtk_mmsys_write_reg(mmsys_dev, cmd, set->reg, 0, 0xFFFFFFFF);
 	}
 
 	return 0;

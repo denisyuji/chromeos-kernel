@@ -403,13 +403,12 @@ EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_config);
 
 void mtk_mmsys_write_reg(struct device *dev,
 			 struct mmsys_cmdq_cmd *cmd,
-			 u32 alias_id, u32 value, u32 mask)
+			 u32 offset, u32 value, u32 mask)
 {
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
-	const u32 *configs = mmsys->data->mdp_mmsys_configs;
 
-	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
-			    mmsys->addr + configs[alias_id], value, mask);
+	cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys,
+			    mmsys->addr + offset, value, mask);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg);
 
