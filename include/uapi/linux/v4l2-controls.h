@@ -2459,8 +2459,8 @@ struct v4l2_av1_loop_filter {
 	__u8 flags;
 	__u8 level[4];
 	__u8 sharpness;
-	__u8 ref_deltas[V4L2_AV1_TOTAL_REFS_PER_FRAME];
-	__u8 mode_deltas[2];
+	__s8 ref_deltas[V4L2_AV1_TOTAL_REFS_PER_FRAME];
+	__s8 mode_deltas[2];
 	__u8 delta_lf_res;
 	__u8 delta_lf_multi;
 };
