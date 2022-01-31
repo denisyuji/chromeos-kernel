@@ -1557,7 +1557,6 @@
 	};
 };
 
-
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi_pins_0>;
@@ -1573,11 +1572,40 @@
 		pinctrl-0 = <&ec_ap_int_odl>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		cros_ec_pwm: ec-pwm {
+			compatible = "google,cros-ec-pwm";
+			#pwm-cells = <1>;
+			status = "disabled";
+		};
+
 		i2c_tunnel: i2c-tunnel {
 			compatible = "google,cros-ec-i2c-tunnel";
 			google,remote-bus = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+		};
+
+		typec {
+			compatible = "google,cros-ec-typec";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			usb_c0: connector@0 {
+				compatible = "usb-c-connector";
+				reg = <0>;
+				power-role = "dual";
+				data-role = "host";
+				try-power-role = "source";
+			};
+
+			usb_c1: connector@1 {
+				compatible = "usb-c-connector";
+				reg = <1>;
+				power-role = "dual";
+				data-role = "host";
+				try-power-role = "source";
+			};
 		};
 	};
 };
