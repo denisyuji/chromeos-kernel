@@ -82,6 +82,21 @@
 			reg = <0 0x50000000 0 0x2900000>;
 			no-map;
 		};
+		adsp_mem_reserved: adsp_mem_region {
+			compatible = "mediatek,adsp-reserved-memory";
+			no-map;
+			reg = <0 0x60000000 0 0xD80000>;
+		};
+		snd_dma_mem_reserved: snd_dma_mem_region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60D80000 0 0x0100000>;
+			no-map;
+		};
+		adsp_dma_mem_reserved: adsp_dma_mem_region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60E80000 0 0x0280000>;
+			no-map;
+		};
 		dfd-buffer@6a000000 {
 			compatible = "mediatek,dfd-buffer";
 			reg = <0 0x6A000000 0 0x100000>;
@@ -208,6 +223,11 @@
 	};
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_dma_mem_reserved>,
+			<&adsp_mem_reserved>;
+};
 
 &scp {
 	memory-region = <&scp_mem_reserved>;
@@ -218,6 +238,20 @@
 		compatible = "google,cros-ec-rpmsg";
 		mediatek,rpmsg-name = "cros-ec-rpmsg";
 	};
+};
+
+&sound {
+	compatible = "mediatek,mt8195_mt6359_rt1019_rt5682";
+	model = "mt8195_r1019_5682";
+	mediatek,dptx-codec = <&dp_tx>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&aud_pins_default>;
+	mediatek,adsp = <&adsp>;
+	mediatek,dai-link = "DL10_FE", "DPTX_BE", "ETDM1_IN_BE", "ETDM2_IN_BE",
+			"ETDM1_OUT_BE", "ETDM2_OUT_BE","UL_SRC1_BE",
+			"AFE_SOF_DL2", "AFE_SOF_DL3", "AFE_SOF_UL4", "AFE_SOF_UL5";
+	status = "okay";
 };
 
 &uart0 {
@@ -264,6 +298,7 @@
 };
 
 &afe {
+	memory-region = <&snd_dma_mem_reserved>;
 	mediatek,etdm-in2-cowork-source = <2>;
 	mediatek,etdm-out2-cowork-source = <0>;
 	status = "okay";
