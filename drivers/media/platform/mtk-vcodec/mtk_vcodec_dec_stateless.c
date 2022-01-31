@@ -128,62 +128,22 @@ static struct v4l2_frmsize_stepwise stepwise_fhd = {
 	.step_height = 16
 };
 
-static void mtk_vdec_stateless_out_to_done(struct mtk_vcodec_ctx *ctx,
-					   struct mtk_vcodec_mem *bs, int error)
-{
-	struct mtk_video_dec_buf *out_buf;
-	struct vb2_v4l2_buffer *vb;
-
-	if (!bs) {
-		mtk_v4l2_err("Free bitstream buffer fail.");
-		return;
-	}
-	out_buf = container_of(bs, struct mtk_video_dec_buf, bs_buffer);
-	vb = &out_buf->m2m_buf.vb;
-
-	mtk_v4l2_debug(2, "Free bitsteam buffer id = %d to done_list",
-		       vb->vb2_buf.index);
-
-	v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
-	if (error) {
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
-		if (error == -EIO)
-			out_buf->error = true;
-	} else {
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_DONE);
-	}
-}
-
 static void mtk_vdec_stateless_cap_to_disp(struct mtk_vcodec_ctx *ctx,
 					   struct vdec_fb *fb, int error)
 {
-	struct mtk_video_dec_buf *vdec_frame_buf;
-	struct vb2_v4l2_buffer *vb;
-	unsigned int cap_y_size, cap_c_size;
+	enum vb2_buffer_state state;
 
 	if (!fb) {
 		mtk_v4l2_err("Free frame buffer fail.");
 		return;
 	}
-	vdec_frame_buf = container_of(fb, struct mtk_video_dec_buf,
-				      frame_buffer);
-	vb = &vdec_frame_buf->m2m_buf.vb;
 
-	cap_y_size = ctx->q_data[MTK_Q_DATA_DST].sizeimage[0];
-	cap_c_size = ctx->q_data[MTK_Q_DATA_DST].sizeimage[1];
-
-	v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
-
-	vb2_set_plane_payload(&vb->vb2_buf, 0, cap_y_size);
-	if (ctx->q_data[MTK_Q_DATA_DST].fmt->num_planes == 2)
-		vb2_set_plane_payload(&vb->vb2_buf, 1, cap_c_size);
-
-	mtk_v4l2_debug(2, "Free frame buffer id = %d to done_list",
-		       vb->vb2_buf.index);
 	if (error)
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_ERROR);
+		state = VB2_BUF_STATE_ERROR;
 	else
-		v4l2_m2m_buf_done(vb, VB2_BUF_STATE_DONE);
+		state = VB2_BUF_STATE_DONE;
+
+	v4l2_m2m_buf_done_and_job_finish (ctx->dev->m2m_dev_dec, ctx->m2m_ctx, state);
 }
 
 static struct vdec_fb *vdec_get_cap_buffer(struct mtk_vcodec_ctx *ctx)
@@ -286,9 +246,8 @@ static void mtk_vdec_worker(struct work_struct *work)
 		}
 	}
 
-	mtk_vdec_stateless_out_to_done(ctx, bs_src, ret);
-	v4l2_ctrl_request_complete(src_buf_req, &ctx->ctrl_hdl);
-	v4l2_m2m_job_finish(dev->m2m_dev_dec, ctx->m2m_ctx);
+	if (src_buf_req)
+		v4l2_ctrl_request_complete(src_buf_req, &ctx->ctrl_hdl);
 }
 
 static void vb2ops_vdec_stateless_buf_queue(struct vb2_buffer *vb)
