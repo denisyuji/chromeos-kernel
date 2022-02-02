@@ -448,15 +448,15 @@ static int validate_av1_film_grain(struct v4l2_av1_film_grain *fg)
 	if (!(fg->flags & V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN))
 		return 0;
 
-	for (i = 1; i < ARRAY_SIZE(fg->point_y_value); i++)
+	for (i = 1; i < fg->num_y_points; i++)
 		if (fg->point_y_value[i] <= fg->point_y_value[i - 1])
 			return -EINVAL;
 
-	for (i = 1; i < ARRAY_SIZE(fg->point_cb_value); i++)
+	for (i = 1; i < fg->num_cb_points; i++)
 		if (fg->point_cb_value[i] <= fg->point_cb_value[i - 1])
 			return -EINVAL;
 
-	for (i = 1; i < ARRAY_SIZE(fg->point_cr_value); i++)
+	for (i = 1; i < fg->num_cr_points; i++)
 		if (fg->point_cr_value[i] <= fg->point_cr_value[i - 1])
 			return -EINVAL;
 
