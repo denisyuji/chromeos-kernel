@@ -65,9 +65,9 @@ static const struct snd_soc_dapm_route mt8195_mt6359_rt1019_rt5682_routes[] = {
 	/* speaker */
 	{ "Speakers", NULL, "Speaker" },
 	/* headset */
-	{ "Headphone Jack", NULL, "HPOL" },
-	{ "Headphone Jack", NULL, "HPOR" },
-	{ "IN1P", NULL, "Headset Mic" },
+	{ "Headphone Jack", NULL, "rt5682 HPOL" },
+	{ "Headphone Jack", NULL, "rt5682 HPOR" },
+	{ "rt5682 IN1P", NULL, "Headset Mic" },
 	/* SOF Uplink */
 	{SOF_DMA_UL4, NULL, "O034"},
 	{SOF_DMA_UL4, NULL, "O035"},
@@ -1238,6 +1238,28 @@ static struct snd_soc_dai_link mt8195_mt6359_rt1019_rt5682_dai_links[] = {
 	},
 };
 
+static struct snd_soc_codec_conf mt8195_mt6359_rt1019_rt5682_codec_conf[] = {
+	{
+		.dlc = COMP_CODEC_CONF("mt6359-sound"),
+		.name_prefix = "mt6359",
+	},
+	{
+		.dlc = COMP_CODEC_CONF(RT5682_DEV0_NAME),
+		.name_prefix = "rt5682",
+	},
+};
+
+static struct snd_soc_codec_conf mt8195_mt6359_rt1019_rt5682s_codec_conf[] = {
+	{
+		.dlc = COMP_CODEC_CONF("mt6359-sound"),
+		.name_prefix = "mt6359",
+	},
+	{
+		.dlc = COMP_CODEC_CONF(RT5682S_DEV0_NAME),
+		.name_prefix = "rt5682",
+	},
+};
+
 static struct snd_soc_card mt8195_mt6359_rt1019_rt5682_soc_card = {
 	.name = "mt8195_r1019_5682",
 	.owner = THIS_MODULE,
@@ -1250,6 +1272,24 @@ static struct snd_soc_card mt8195_mt6359_rt1019_rt5682_soc_card = {
 	.dapm_routes = mt8195_mt6359_rt1019_rt5682_routes,
 	.num_dapm_routes = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_routes),
 	.set_bias_level_post = mt8195_set_bias_level_post,
+	.codec_conf = mt8195_mt6359_rt1019_rt5682_codec_conf,
+	.num_configs = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_codec_conf),
+};
+
+static struct snd_soc_card mt8195_mt6359_rt1019_rt5682s_soc_card = {
+	.name = "mt8195_r1019_5682s",
+	.owner = THIS_MODULE,
+	.dai_link = mt8195_mt6359_rt1019_rt5682_dai_links,
+	.num_links = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_dai_links),
+	.controls = mt8195_mt6359_rt1019_rt5682_controls,
+	.num_controls = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_controls),
+	.dapm_widgets = mt8195_mt6359_rt1019_rt5682_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_widgets),
+	.dapm_routes = mt8195_mt6359_rt1019_rt5682_routes,
+	.num_dapm_routes = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682_routes),
+	.set_bias_level_post = mt8195_set_bias_level_post,
+	.codec_conf = mt8195_mt6359_rt1019_rt5682s_codec_conf,
+	.num_configs = ARRAY_SIZE(mt8195_mt6359_rt1019_rt5682s_codec_conf),
 };
 
 static int mt8195_dailink_parse_of(struct snd_soc_card *card, struct device_node *np,
@@ -1301,7 +1341,7 @@ static int mt8195_dailink_parse_of(struct snd_soc_card *card, struct device_node
 
 static int mt8195_mt6359_rt1019_rt5682_dev_probe(struct platform_device *pdev)
 {
-	struct snd_soc_card *card = &mt8195_mt6359_rt1019_rt5682_soc_card;
+	struct snd_soc_card *card;
 	struct snd_soc_dai_link *dai_link;
 	struct mt8195_mt6359_rt1019_rt5682_priv *priv;
 	struct device_node *platform_node, *adsp_node, *dp_node, *hdmi_node;
@@ -1310,6 +1350,9 @@ static int mt8195_mt6359_rt1019_rt5682_dev_probe(struct platform_device *pdev)
 	int sof_on = 0;
 	int ret, i;
 
+	card = (struct snd_soc_card *)device_get_match_data(&pdev->dev);
+	if (!card)
+		return -EINVAL;
 	card->dev = &pdev->dev;
 
 	ret = snd_soc_of_parse_card_name(card, "model");
@@ -1411,7 +1454,14 @@ static int mt8195_mt6359_rt1019_rt5682_dev_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 static const struct of_device_id mt8195_mt6359_rt1019_rt5682_dt_match[] = {
-	{.compatible = "mediatek,mt8195_mt6359_rt1019_rt5682",},
+	{
+		.compatible = "mediatek,mt8195_mt6359_rt1019_rt5682",
+		.data = &mt8195_mt6359_rt1019_rt5682_soc_card,
+	},
+	{
+		.compatible = "mediatek,mt8195_mt6359_rt1019_rt5682s",
+		.data = &mt8195_mt6359_rt1019_rt5682s_soc_card,
+	},
 	{}
 };
 #endif
