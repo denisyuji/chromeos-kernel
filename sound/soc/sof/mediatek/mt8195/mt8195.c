@@ -122,7 +122,7 @@ static struct mtk_adsp_ipc_ops dsp_ops = {
 };
 
 static struct snd_soc_acpi_mach sof_mt8195_mach = {
-	.drv_name = "mt8195_mt6359_rt1019_rt5682",
+	.drv_name = "sof-mt8195_r1019_5682",
 	.sof_tplg_filename = "sof-mt8195-mt6359-rt1019-rt5682.tplg",
 };
 
