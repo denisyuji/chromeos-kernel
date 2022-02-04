@@ -8,6 +8,7 @@
 
 #include <dt-bindings/clock/mt8195-clk.h>
 #include <dt-bindings/gce/mt8195-gce.h>
+#include <dt-bindings/interconnect/mtk,mt8195-emi.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/memory/mt8195-memory-port.h>
@@ -714,6 +715,12 @@
 			compatible = "mediatek,mt8195-apmixedsys", "syscon";
 			reg = <0 0x1000c000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		ddr_emi: dvfsrc@10012000 {
+			compatible = "mediatek,mt8195-dvfsrc";
+			reg = <0 0x10012000 0 0x1000>;
+			#interconnect-cells = <1>;
 		};
 
 		systimer: timer@10017000 {
