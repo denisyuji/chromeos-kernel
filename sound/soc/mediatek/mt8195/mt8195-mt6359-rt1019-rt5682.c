@@ -1210,24 +1210,28 @@ static struct snd_soc_dai_link mt8195_mt6359_rt1019_rt5682_dai_links[] = {
 	/* SOF BE */
 	[DAI_LINK_SOF_DL2_BE] = {
 		.name = "AFE_SOF_DL2",
+		.stream_name = "AFE_SOF_DL2",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(AFE_SOF_DL2),
 	},
 	[DAI_LINK_SOF_DL3_BE] = {
 		.name = "AFE_SOF_DL3",
+		.stream_name = "AFE_SOF_DL3",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(AFE_SOF_DL3),
 	},
 	[DAI_LINK_SOF_UL4_BE] = {
 		.name = "AFE_SOF_UL4",
+		.stream_name = "AFE_SOF_UL4",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
 		SND_SOC_DAILINK_REG(AFE_SOF_UL4),
 	},
 	[DAI_LINK_SOF_UL5_BE] = {
 		.name = "AFE_SOF_UL5",
+		.stream_name = "AFE_SOF_UL5",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
 		SND_SOC_DAILINK_REG(AFE_SOF_UL5),
