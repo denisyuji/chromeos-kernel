@@ -570,6 +570,7 @@ static const struct snd_sof_dsp_ops sof_mt8195_ops = {
 
 	/* machine driver */
 	.machine_select = mt8195_machine_select,
+	.machine_register = sof_machine_register,
 
 	/* module loading */
 	.load_module	= snd_sof_parse_module_memcpy,
