@@ -53,7 +53,7 @@ struct mt8195_mt6359_rt1019_rt5682_priv {
 static const struct snd_soc_dapm_widget
 	mt8195_mt6359_rt1019_rt5682_widgets[] = {
 	SND_SOC_DAPM_SPK("Speakers", NULL),
-	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIXER(SOF_DMA_DL2, SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER(SOF_DMA_DL3, SND_SOC_NOPM, 0, 0, NULL, 0),
@@ -65,8 +65,8 @@ static const struct snd_soc_dapm_route mt8195_mt6359_rt1019_rt5682_routes[] = {
 	/* speaker */
 	{ "Speakers", NULL, "Speaker" },
 	/* headset */
-	{ "Headphone Jack", NULL, "rt5682 HPOL" },
-	{ "Headphone Jack", NULL, "rt5682 HPOR" },
+	{ "Headphone", NULL, "rt5682 HPOL" },
+	{ "Headphone", NULL, "rt5682 HPOR" },
 	{ "rt5682 IN1P", NULL, "Headset Mic" },
 	/* SOF Uplink */
 	{SOF_DMA_UL4, NULL, "O034"},
@@ -82,7 +82,7 @@ static const struct snd_soc_dapm_route mt8195_mt6359_rt1019_rt5682_routes[] = {
 
 static const struct snd_kcontrol_new mt8195_mt6359_rt1019_rt5682_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Speakers"),
-	SOC_DAPM_PIN_SWITCH("Headphone Jack"),
+	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Headset Mic"),
 };
 
