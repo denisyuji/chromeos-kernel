@@ -244,6 +244,7 @@ static void mtk_vdec_worker(struct work_struct *work)
 			dec_buf_src->error = true;
 			mutex_unlock(&ctx->lock);
 		}
+		v4l2_m2m_job_finish(dev->m2m_dev_dec, ctx->m2m_ctx);
 	}
 
 	if (src_buf_req)
