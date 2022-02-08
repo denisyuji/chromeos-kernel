@@ -1654,14 +1654,14 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 		  jpeg->variant->dev_name, jpeg->vdev->num,
 		  VIDEO_MAJOR, jpeg->vdev->minor);
 
+	platform_set_drvdata(pdev, jpeg);
+
 	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL,
 		&pdev->dev);
 	if (ret) {
 		v4l2_err(&jpeg->v4l2_dev, "Master of platform populate failed.");
 		goto err_vfd_jpeg_register;
 	}
-
-	platform_set_drvdata(pdev, jpeg);
 
 	return 0;
 
