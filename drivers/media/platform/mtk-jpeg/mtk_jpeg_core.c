@@ -1786,8 +1786,8 @@ static const struct mtk_jpeg_variant mtk_jpegenc_drvdata = {
 
 static const struct mtk_jpeg_variant mtk_jpegdec_drvdata = {
 	.is_encoder	= false,
-	.clks = mtk_jpeg_dec_clocks,
-	.num_clks = ARRAY_SIZE(mtk_jpeg_dec_clocks),
+	.clks = mt8173_jpeg_dec_clocks,
+	.num_clks = ARRAY_SIZE(mt8173_jpeg_dec_clocks),
 	.formats = mtk_jpeg_dec_formats,
 	.num_formats = MTK_JPEG_DEC_NUM_FORMATS,
 	.qops = &mtk_jpeg_dec_qops,
