@@ -1329,27 +1329,27 @@
 			reg = <0 0x11c10000 0 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			u3_tx_imp_p0: usb3-tx-imp@184 {
+			u3_tx_imp_p0: usb3-tx-imp-p0@184 {
 				reg = <0x184 0x1>;
 				bits = <0 5>;
 			};
-			u3_rx_imp_p0: usb3-rx-imp@184 {
+			u3_rx_imp_p0: usb3-rx-imp-p0@184 {
 				reg = <0x184 0x2>;
 				bits = <5 5>;
 			};
-			u3_intr_p0: usb3-intr@185 {
+			u3_intr_p0: usb3-intr-p0@185 {
 				reg = <0x185 0x1>;
 				bits = <2 6>;
 			};
-			comb_tx_imp_p1: usb3-tx-imp@186 {
+			comb_tx_imp_p1: usb3-tx-imp-p1@186 {
 				reg = <0x186 0x1>;
 				bits = <0 5>;
 			};
-			comb_rx_imp_p1: usb3-rx-imp@186 {
+			comb_rx_imp_p1: usb3-rx-imp-p1@186 {
 				reg = <0x186 0x2>;
 				bits = <5 5>;
 			};
-			comb_intr_p1: usb3-intr@187 {
+			comb_intr_p1: usb3-intr-p1@187 {
 				reg = <0x187 0x1>;
 				bits = <2 6>;
 			};
@@ -1369,7 +1369,7 @@
 				reg = <0x189 0x2>;
 				bits = <7 5>;
 			};
-			dp_calibration: dp_data@1ac {
+			dp_calibration: dp-data@1ac {
 				reg = <0x1ac 0x10>;
 			};
 		};
