@@ -327,11 +327,11 @@ static int validate_av1_quantization(struct v4l2_av1_quantization *q)
 	if (q->flags > GENMASK(2, 0))
 		return -EINVAL;
 
-	if (q->delta_q_y_dc < -63 || q->delta_q_y_dc > 63 ||
-	    q->delta_q_u_dc < -63 || q->delta_q_u_dc > 63 ||
-	    q->delta_q_v_dc < -63 || q->delta_q_v_dc > 63 ||
-	    q->delta_q_u_ac < -63 || q->delta_q_u_ac > 63 ||
-	    q->delta_q_v_ac < -63 || q->delta_q_v_ac > 63 ||
+	if (q->delta_q_y_dc < -64 || q->delta_q_y_dc > 63 ||
+	    q->delta_q_u_dc < -64 || q->delta_q_u_dc > 63 ||
+	    q->delta_q_v_dc < -64 || q->delta_q_v_dc > 63 ||
+	    q->delta_q_u_ac < -64 || q->delta_q_u_ac > 63 ||
+	    q->delta_q_v_ac < -64 || q->delta_q_v_ac > 63 ||
 	    q->delta_q_res > GENMASK(1, 0))
 		return -EINVAL;
 
@@ -389,12 +389,12 @@ static int validate_av1_loop_filter(struct v4l2_av1_loop_filter *lf)
 		return -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(lf->ref_deltas); i++) {
-		if (lf->ref_deltas[i] < -63 || lf->ref_deltas[i] > 63)
+		if (lf->ref_deltas[i] < -64 || lf->ref_deltas[i] > 63)
 			return -EINVAL;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(lf->mode_deltas); i++) {
-		if (lf->mode_deltas[i] < -63 || lf->mode_deltas[i] > 63)
+		if (lf->mode_deltas[i] < -64 || lf->mode_deltas[i] > 63)
 			return -EINVAL;
 	}
 
