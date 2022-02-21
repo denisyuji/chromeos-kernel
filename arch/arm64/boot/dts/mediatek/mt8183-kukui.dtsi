@@ -275,6 +275,7 @@
 		avdd-supply = <&ppvarn_lcd>;
 		avee-supply = <&ppvarp_lcd>;
 		pp1800-supply = <&pp1800_lcd>;
+		pp3300-supply = <&lcd_pp3300>;
 		backlight = <&backlight_lcd0>;
 		port {
 			panel_in: endpoint {
