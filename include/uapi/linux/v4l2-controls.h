@@ -2649,7 +2649,7 @@ enum v4l2_av1_tx_mode {
  * operating point opNum.
  * @refresh_frame_flags: contains a bitmask that specifies which reference frame
  * slots will be updated with the current frame after it is decoded.
- * @ref_order_hint: specifies the expected output order hint for each reference
+ * @order_hints: specifies the expected output order hint for each reference
  * frame.
  * @last_frame_idx: specifies the reference frame to use for LAST_FRAME.
  * @gold_frame_idx: specifies the reference frame to use for GOLDEN_FRAME.
@@ -2684,9 +2684,9 @@ struct v4l2_ctrl_av1_frame_header {
 
 	__u32 current_frame_id;
 	__u8 primary_ref_frame;
-	__u8 buffer_removal_time[V4L2_AV1_MAX_OPERATING_POINTS];
+	__u32 buffer_removal_time[V4L2_AV1_MAX_OPERATING_POINTS];
 	__u8 refresh_frame_flags;
-	__u32 ref_order_hint[V4L2_AV1_NUM_REF_FRAMES];
+	__u32 order_hints[V4L2_AV1_NUM_REF_FRAMES];
 	__s8 last_frame_idx;
 	__s8 gold_frame_idx;
 	__u64 reference_frame_ts[V4L2_AV1_REFS_PER_FRAME];
