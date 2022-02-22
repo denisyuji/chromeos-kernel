@@ -173,10 +173,10 @@ void mtk_vdec_h264_copy_slice_hd_params(struct mtk_h264_slice_hd_param *dst_para
 void mtk_vdec_h264_copy_scaling_matrix(struct slice_api_h264_scaling_matrix *dst_matrix,
 				       const struct v4l2_ctrl_h264_scaling_matrix *src_matrix)
 {
-	memcpy(dst_matrix->scaling_list_4x4, src_matrix->scaling_list_4x4,
+	memcpy_toio(dst_matrix->scaling_list_4x4, src_matrix->scaling_list_4x4,
 	       sizeof(dst_matrix->scaling_list_4x4));
 
-	memcpy(dst_matrix->scaling_list_8x8, src_matrix->scaling_list_8x8,
+	memcpy_toio(dst_matrix->scaling_list_8x8, src_matrix->scaling_list_8x8,
 	       sizeof(dst_matrix->scaling_list_8x8));
 }
 

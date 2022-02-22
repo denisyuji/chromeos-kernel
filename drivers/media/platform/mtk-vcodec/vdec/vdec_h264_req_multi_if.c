@@ -448,7 +448,7 @@ static int vdec_h264_slice_core_decode(struct vdec_lat_buf *lat_buf)
 	struct vdec_vpu_inst *vpu = &inst->vpu;
 
 	mtk_vcodec_debug(inst, "[h264-core] vdec_h264 core decode");
-	memcpy(&inst->vsi_core->h264_slice_params, &share_info->h264_slice_params,
+	memcpy_toio(&inst->vsi_core->h264_slice_params, &share_info->h264_slice_params,
 	       sizeof(share_info->h264_slice_params));
 
 	fb = ctx->dev->vdec_pdata->get_cap_buffer(ctx);
@@ -576,6 +576,12 @@ static int vdec_h264_slice_decode(void *h_vdec, struct mtk_vcodec_mem *bs,
 	if (err)
 		goto err_free_fb_out;
 
+	if (share_info->dec_params.flags & V4L2_H264_DECODE_PARAM_FLAG_FIELD_PIC) {
+		mtk_vcodec_err(inst, "h264 not support field bitsteam");
+		err = -EINVAL;
+		goto err_free_fb_out;
+	}
+
 	*res_chg = inst->resolution_changed;
 	if (inst->resolution_changed) {
 		mtk_vcodec_debug(inst, "- resolution changed -");
@@ -623,7 +629,7 @@ static int vdec_h264_slice_decode(void *h_vdec, struct mtk_vcodec_mem *bs,
 	share_info->nal_info = inst->vsi->dec.nal_info;
 
 	if (IS_VDEC_INNER_RACING(inst->ctx->dev->dec_capability)) {
-		memcpy(&share_info->h264_slice_params, &inst->vsi->h264_slice_params,
+		memcpy_fromio(&share_info->h264_slice_params, &inst->vsi->h264_slice_params,
 		       sizeof(share_info->h264_slice_params));
 		vdec_msg_queue_qbuf(&inst->ctx->dev->msg_queue_core_ctx, lat_buf);
 	}
@@ -645,7 +651,7 @@ static int vdec_h264_slice_decode(void *h_vdec, struct mtk_vcodec_mem *bs,
 				       share_info->trans_end);
 
 	if (!IS_VDEC_INNER_RACING(inst->ctx->dev->dec_capability)) {
-		memcpy(&share_info->h264_slice_params, &inst->vsi->h264_slice_params,
+		memcpy_fromio(&share_info->h264_slice_params, &inst->vsi->h264_slice_params,
 		       sizeof(share_info->h264_slice_params));
 		vdec_msg_queue_qbuf(&inst->ctx->dev->msg_queue_core_ctx, lat_buf);
 	}
