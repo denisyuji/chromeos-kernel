@@ -2504,6 +2504,7 @@ static void mtk_dp_poweroff(struct mtk_dp *mtk_dp)
 	mtk_dp_hwirq_enable(mtk_dp, false);
 	mtk_dp_power_disable(mtk_dp);
 	phy_exit(mtk_dp->phy);
+	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 
 	mutex_unlock(&mtk_dp->dp_lock);
 }
@@ -2514,10 +2515,15 @@ static int mtk_dp_poweron(struct mtk_dp *mtk_dp)
 
 	mutex_lock(&mtk_dp->dp_lock);
 
+	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
+	if (ret < 0) {
+		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
+		goto err;
+	}
 	ret = phy_init(mtk_dp->phy);
 	if (ret) {
 		dev_err(mtk_dp->dev, "Failed to initialize phy: %d\n", ret);
-		goto err;
+		goto err_phy_init;
 	}
 	ret = mtk_dp_phy_configure(mtk_dp, MTK_DP_LINKRATE_RBR, 1);
 	if (ret) {
@@ -2531,6 +2537,8 @@ static int mtk_dp_poweron(struct mtk_dp *mtk_dp)
 
 err_phy_config:
 	phy_exit(mtk_dp->phy);
+err_phy_init:
+	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 err:
 	mutex_unlock(&mtk_dp->dp_lock);
 	return ret;
@@ -2542,20 +2550,14 @@ static int mtk_dp_bridge_attach(struct drm_bridge *bridge,
 	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
 	int ret;
 
+	ret = mtk_dp_poweron(mtk_dp);
+	if (ret)
+		return ret;
+
 	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR)) {
 		dev_err(mtk_dp->dev, "Driver does not provide a connector!");
 		return -EINVAL;
 	}
-
-	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
-	if (ret) {
-		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
-		return ret;
-	}
-
-	ret = mtk_dp_poweron(mtk_dp);
-	if (ret) 
-		goto end;
 
 	if (mtk_dp->next_bridge) {
 		ret = drm_bridge_attach(bridge->encoder, mtk_dp->next_bridge,
@@ -2563,34 +2565,23 @@ static int mtk_dp_bridge_attach(struct drm_bridge *bridge,
 		if (ret) {
 			drm_warn(mtk_dp->drm_dev,
 				 "Failed to attach external bridge: %d\n", ret);
-			goto end;
+			goto err_bridge_attach;
 		}
 	}
 
 	mtk_dp->drm_dev = bridge->dev;
-end:
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 
+	return 0;
+
+err_bridge_attach:
 	return ret;
-
 }
 
 static void mtk_dp_bridge_detach(struct drm_bridge *bridge)
 {
 	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
-	int ret;
 
 	mtk_dp->drm_dev = NULL;
-
-	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
-	if (ret) {
-		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
-		return;
-	}
-
-	mtk_dp_poweroff(mtk_dp);
-
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 }
 
 static void mtk_dp_bridge_atomic_disable(struct drm_bridge *bridge,
@@ -2605,7 +2596,7 @@ static void mtk_dp_bridge_atomic_disable(struct drm_bridge *bridge,
 
 	mtk_dp->enabled = false;
 	msleep(100);
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
+	mtk_dp_poweroff(mtk_dp);
 }
 
 static void mtk_dp_parse_drm_mode_timings(struct mtk_dp *mtk_dp,
@@ -2662,31 +2653,21 @@ static void mtk_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 		return;
 	}
 
-	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
-	if (ret < 0) {
-		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
-		return;
-	}
-
 	mtk_dp_parse_drm_mode_timings(mtk_dp, &crtc_state->adjusted_mode);
 	if (!mtk_dp_parse_capabilities(mtk_dp)) {
 		drm_err(mtk_dp->drm_dev,
 			"Can't enable bridge as nothing is plugged in\n");
-		goto err_poweroff;
+		return;
 	}
 
 	ret = mtk_dp_train_handler(mtk_dp);
 	if (ret) {
 		drm_err(mtk_dp->drm_dev, "Train handler failed %d\n", ret);
-		goto err_poweroff;
+		return;
 	}
 
 	mtk_dp->enabled = true;
 	mtk_dp_update_plugged_status(mtk_dp);
-	return;
-
-err_poweroff:
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 }
 
 static enum drm_mode_status
@@ -3041,11 +3022,6 @@ static int mtk_dp_remove(struct platform_device *pdev)
 static int mtk_dp_suspend(struct device *dev)
 {
 	struct mtk_dp *mtk_dp = dev_get_drvdata(dev);
-	int ret;
-
-	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
-	if (ret)
-		return ret;
 
 	if (mtk_dp_plug_state(mtk_dp)) {
 		drm_dp_dpcd_writeb(&mtk_dp->aux, DP_SET_POWER, DP_SET_POWER_D3);
@@ -3055,8 +3031,6 @@ static int mtk_dp_suspend(struct device *dev)
 	mtk_dp_power_disable(mtk_dp);
 	mtk_dp_hwirq_enable(mtk_dp, false);
 
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
-
 	pm_runtime_put_sync(dev);
 
 	return 0;
@@ -3065,21 +3039,12 @@ static int mtk_dp_suspend(struct device *dev)
 static int mtk_dp_resume(struct device *dev)
 {
 	struct mtk_dp *mtk_dp = dev_get_drvdata(dev);
-	int ret;
 
 	pm_runtime_get_sync(dev);
-
-	ret = clk_prepare_enable(mtk_dp->dp_tx_clk);
-	if (ret) {
-		dev_err(mtk_dp->dev, "Fail to enable clock: %d\n", ret);
-		return ret;
-	}
 
 	mtk_dp_init_port(mtk_dp);
 	mtk_dp_power_enable(mtk_dp);
 	mtk_dp_hwirq_enable(mtk_dp, true);
-
-	clk_disable_unprepare(mtk_dp->dp_tx_clk);
 
 	return 0;
 }
