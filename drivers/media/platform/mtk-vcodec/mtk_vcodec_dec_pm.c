@@ -104,7 +104,6 @@ static void mtk_vcodec_dec_clock_off(struct mtk_vcodec_pm *pm)
 	int i;
 
 	dec_clk = &pm->vdec_clk;
-	mtk_smi_larb_put(pm->larbvdec);
 	for (i = dec_clk->clk_num - 1; i >= 0; i--)
 		clk_disable_unprepare(dec_clk->clk_info[i].vcodec_clk);
 }
