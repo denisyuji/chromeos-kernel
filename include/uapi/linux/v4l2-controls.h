@@ -2421,7 +2421,7 @@ enum v4l2_av1_segment_feature {
 struct v4l2_av1_segmentation {
 	__u8 flags;
 	__u8 feature_enabled[V4L2_AV1_MAX_SEGMENTS];
-	__u16 feature_data[V4L2_AV1_MAX_SEGMENTS][V4L2_AV1_SEG_LVL_MAX];
+	__s16 feature_data[V4L2_AV1_MAX_SEGMENTS][V4L2_AV1_SEG_LVL_MAX];
 	__u8 last_active_seg_id;
 };
 
