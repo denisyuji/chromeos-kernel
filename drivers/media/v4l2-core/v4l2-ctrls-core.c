@@ -359,7 +359,7 @@ static int validate_av1_segmentation(struct v4l2_av1_segmentation *s)
 	u32 j;
 	s32 limit;
 
-	if (s->flags > GENMASK(3, 0))
+	if (s->flags > GENMASK(4, 0))
 		return -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(s->feature_data); i++) {
