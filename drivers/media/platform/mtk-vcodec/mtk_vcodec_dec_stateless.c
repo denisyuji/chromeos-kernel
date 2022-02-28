@@ -149,7 +149,6 @@ static const struct mtk_stateless_control mtk_stateless_controls[] = {
 		.cfg = {
 			.id = V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY,
 			.dims = { V4L2_AV1_MAX_TILE_COUNT },
- 
 		},
 		.codec_type = V4L2_PIX_FMT_AV1_FRAME,
 	},
