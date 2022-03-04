@@ -1584,7 +1584,7 @@ static int vdec_av1_slice_setup_tile_group(
 	}
 
 	for (i = 0; i < tge_size; i++) {
-		if (i != ctrl_tge[i].tile_row * vsi->frame.uh.tile.tile_rows +
+		if (i != ctrl_tge[i].tile_row * vsi->frame.uh.tile.tile_cols +
 			ctrl_tge[i].tile_col) {
 			mtk_vcodec_err(instance, 
 				"Invalid tge info %d, %d %d %d\n",
