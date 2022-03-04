@@ -1269,11 +1269,16 @@ static int boe_panel_prepare(struct drm_panel *panel)
 	gpiod_set_value(boe->enable_gpio, 1);
 	usleep_range(6000, 10000);
 
+	/* Send init commands in High Speed mode */
+	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+
 	ret = boe_panel_init_dcs_cmd(boe);
 	if (ret < 0) {
 		dev_err(panel->dev, "failed to init panel: %d\n", ret);
 		goto poweroff;
 	}
+
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
 	boe->prepared = true;
 
@@ -1376,8 +1381,7 @@ static const struct panel_desc boe_tv101wum_nl6_desc = {
 	},
 	.lanes = 4,
 	.format = MIPI_DSI_FMT_RGB888,
-	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_SYNC_PULSE |
-		      MIPI_DSI_MODE_LPM,
+	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_SYNC_PULSE,
 	.init_cmds = boe_init_cmd,
 	.discharge_on_disable = false,
 };
