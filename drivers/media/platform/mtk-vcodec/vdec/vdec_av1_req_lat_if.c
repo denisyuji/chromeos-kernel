@@ -281,7 +281,7 @@ struct vdec_av1_slice_seg {
 };
 
 /**
- * struct vdec_av1_slicee_delta_q_lf - AV1 Loop Filter delta parameters
+ * struct vdec_av1_slice_delta_q_lf - AV1 Loop Filter delta parameters
  * @delta_q_present  : specified whether quantizer index delta values are present
  * @delta_q_res  :  specifies the left shift which should be applied to decoded quantizer index
  * @delta_lf_present  : specifies whether loop filter delta values are present
@@ -290,7 +290,7 @@ struct vdec_av1_slice_seg {
  * @delta_lf_multi : specifies that separate loop filter deltas are sent for horizontal
  *                   luma edges,vertical luma edges,the u edges, and the v edges.
  */
-struct vdec_av1_slicee_delta_q_lf {
+struct vdec_av1_slice_delta_q_lf {
 	unsigned char delta_q_present;
 	unsigned char delta_q_res;
 	unsigned char delta_lf_present;
@@ -495,7 +495,7 @@ struct vdec_av1_slice_uncompressed_header {
 	unsigned int disable_cdf_update;
 	struct vdec_av1_slice_sm skip_mode;
 	struct vdec_av1_slice_seg seg;
-	struct vdec_av1_slicee_delta_q_lf delta_q_lf;
+	struct vdec_av1_slice_delta_q_lf delta_q_lf;
 	struct vdec_av1_slice_quantization quant;
 	struct vdec_av1_slice_lr lr;
 	unsigned int superres_denom;
@@ -2182,6 +2182,8 @@ static int vdec_av1_slice_flush(void *h_vdec, struct mtk_vcodec_mem *bs,
 	mtk_vcodec_debug(instance, "flush ...\n");
 	for (i = 0; i < AV1_TOTAL_REFS_PER_FRAME; i++)
 			instance->slots.ref_frame_map[i] = AV1_INVALID_IDX;
+	for (i = 0; i < AV1_MAX_FRAME_BUF_COUNT; i++)
+			vdec_av1_slice_clear_fb(&instance->slots.frame_info[i]);
 
 	vdec_msg_queue_wait_lat_buf_full(&instance->ctx->msg_queue);
 	return vpu_dec_reset(&instance->vpu);
