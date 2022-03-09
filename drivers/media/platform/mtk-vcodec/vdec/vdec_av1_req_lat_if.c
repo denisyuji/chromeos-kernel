@@ -601,6 +601,7 @@ struct vdec_av1_slice_work_buffer {
  * @frame_type : frame type
  * @frame_is_intra : is intra frame
  * @order_hint : order hint
+ * @order_hints : referece frame order hint
  * @upscaled_width : upscale width
  * @pic_pitch : buffer pitch
  * @frame_width : frane width
@@ -613,6 +614,7 @@ struct vdec_av1_slice_frame_info {
 	unsigned char frame_type;
 	unsigned char frame_is_intra;
 	int order_hint;
+	unsigned int order_hints[AV1_REFS_PER_FRAME];
 	unsigned int upscaled_width;
 	unsigned int pic_pitch;
 	unsigned int frame_width;
@@ -989,7 +991,6 @@ static int vdec_av1_slice_setup_slot(
 		((uh->frame_type == AV1_INTRA_ONLY_FRAME) ||
 		(uh->frame_type == AV1_KEY_FRAME));
 	cur_frame_info->order_hint = uh->order_hint;
-
 	cur_frame_info->upscaled_width = uh->upscaled_width;
 	cur_frame_info->pic_pitch = 0;
 	cur_frame_info->frame_width = uh->frame_width;
@@ -1671,6 +1672,8 @@ static void vdec_av1_slice_setup_ref(
 	struct vdec_av1_slice_slot *slots = &vsi->slots;
 	struct vdec_av1_slice_uncompressed_header *uh = &frame->uh;
 	struct vdec_av1_slice_seq_header *seq = &frame->seq;
+	struct vdec_av1_slice_frame_info *cur_frame_info =
+		&slots->frame_info[vsi->slot_id];
 	int i, j;
 
 	if (uh->frame_is_intra)
@@ -1696,6 +1699,7 @@ static void vdec_av1_slice_setup_ref(
 						0 : 1;
 
 				frame->order_hints[i] = ctrl_fh->order_hints[i + 1];
+				cur_frame_info->order_hints[i] = frame->order_hints[i];
 				frame->ref_frame_valid[i] = 1;
 				break;
 			}
