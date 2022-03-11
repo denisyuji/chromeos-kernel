@@ -21,3 +21,7 @@
 		bias-pull-down;
 	};
 };
+
+&ts_15 {
+	status = "okay";
+};
