@@ -9,3 +9,15 @@
 	model = "MediaTek Dojo (rev0) board";
 	compatible = "google,dojo-rev0", "google,dojo", "mediatek,mt8195";
 };
+
+&pio_default {
+	pins-low-power-hdmi-disable {
+		pinmux = <PINMUX_GPIO31__FUNC_GPIO31>,
+			 <PINMUX_GPIO32__FUNC_GPIO32>,
+			 <PINMUX_GPIO33__FUNC_GPIO33>,
+			 <PINMUX_GPIO34__FUNC_GPIO34>,
+			 <PINMUX_GPIO35__FUNC_GPIO35>;
+		input-enable;
+		bias-pull-down;
+	};
+};
