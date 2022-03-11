@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 MediaTek Inc.
+ */
+/dts-v1/;
+#include "mt8195-cherry.dtsi"
+
+/ {
+	model = "MediaTek Dojo (rev0) board";
+	compatible = "google,dojo-rev0", "google,dojo", "mediatek,mt8195";
+};
