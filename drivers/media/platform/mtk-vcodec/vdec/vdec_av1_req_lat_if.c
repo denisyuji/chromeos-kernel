@@ -632,7 +632,7 @@ struct vdec_av1_slice_frame_info {
  */
 struct vdec_av1_slice_slot {
        struct vdec_av1_slice_frame_info frame_info[AV1_MAX_FRAME_BUF_COUNT];
-	   int ref_frame_map[AV1_TOTAL_REFS_PER_FRAME];
+       int ref_frame_map[AV1_TOTAL_REFS_PER_FRAME];
        uint64_t timestamp[AV1_MAX_FRAME_BUF_COUNT];
 };
 
@@ -931,50 +931,45 @@ static int vdec_av1_slice_decrease_ref_count(
 	return -EINVAL;
 }
 
-static int vdec_av1_slice_increase_ref_count(
+static void vdec_av1_slice_cleanup_slots(
 	struct vdec_av1_slice_slot *slots,
-	int fb_idx)
+	struct v4l2_ctrl_av1_frame_header *ctrl_fh)
 {
-	if (fb_idx >= 0 && fb_idx < AV1_MAX_FRAME_BUF_COUNT) {
-		slots->frame_info[fb_idx].ref_count++;
-		return 0;
-	} else
-		mtk_v4l2_err(
-			"av1_error: %s() invalid fb_idx %d\n", __func__, fb_idx);
-	return -EINVAL;
-}
+	int slot_id, ref_id;
 
-static int vdec_av1_slice_update_ref_slot(
-	struct vdec_av1_slice_vsi *vsi,
-	struct vdec_av1_slice_slot *slots)
-{
-	struct vdec_av1_slice_uncompressed_header *uh = &vsi->frame.uh;
-	int *ref_frame_map = slots->ref_frame_map;
-	unsigned int mask = 0;
-	int i = 0;
+	for (ref_id = 0; ref_id < AV1_TOTAL_REFS_PER_FRAME; ref_id++)
+		slots->ref_frame_map[ref_id] = AV1_INVALID_IDX;
 
-	for (mask = uh->refresh_frame_flags;
-		(mask && i < AV1_TOTAL_REFS_PER_FRAME); mask >>= 1) {
-		if (mask & 1) {
-			if (ref_frame_map[i] != AV1_INVALID_IDX)
-				vdec_av1_slice_decrease_ref_count(slots, ref_frame_map[i]);
-			ref_frame_map[i] = vsi->slot_id;
-			vdec_av1_slice_increase_ref_count(slots, ref_frame_map[i]);
+	for (slot_id = 0; slot_id < AV1_MAX_FRAME_BUF_COUNT; slot_id++) {
+		uint64_t timestamp = slots->timestamp[slot_id];
+		bool ref_used = false;
+
+		/* ignored unused slots */
+		if (slots->frame_info[slot_id].ref_count == 0)
+			continue;
+
+		for (ref_id = 0; ref_id < AV1_TOTAL_REFS_PER_FRAME; ref_id++) {
+			if (ctrl_fh->reference_frame_ts[ref_id] == timestamp) {
+				slots->ref_frame_map[ref_id] = slot_id;
+				ref_used = true;
+			}
 		}
-		i++;
+
+		if (!ref_used)
+			vdec_av1_slice_decrease_ref_count(slots, slot_id);
 	}
-
-	vdec_av1_slice_decrease_ref_count(slots, vsi->slot_id);
-
-	return 0;
 }
 
 static int vdec_av1_slice_setup_slot(
 	struct vdec_av1_slice_instance *instance,
-	struct vdec_av1_slice_vsi *vsi)
+	struct vdec_av1_slice_vsi *vsi,
+	struct v4l2_ctrl_av1_frame_header *ctrl_fh)
 {
  	struct vdec_av1_slice_frame_info *cur_frame_info;
 	struct vdec_av1_slice_uncompressed_header *uh = &vsi->frame.uh;
+	int ref_id;
+
+	vdec_av1_slice_cleanup_slots(&instance->slots, ctrl_fh);
 
 	memcpy_toio(&vsi->slots, &instance->slots, sizeof(instance->slots));
 	vsi->slot_id = vdec_av1_slice_get_new_slot(vsi);
@@ -997,6 +992,14 @@ static int vdec_av1_slice_setup_slot(
 	cur_frame_info->frame_height = uh->frame_height;
 	cur_frame_info->mi_cols = ((uh->frame_width + 7) >> 3) << 1;
 	cur_frame_info->mi_rows = ((uh->frame_height + 7) >> 3) << 1;
+
+	/* ensure current frame is properly mapped if referenced */
+	for (ref_id = 0; ref_id < AV1_TOTAL_REFS_PER_FRAME; ref_id++) {
+		uint64_t timestamp = vsi->slots.timestamp[vsi->slot_id];
+
+		if (ctrl_fh->reference_frame_ts[ref_id] == timestamp)
+			vsi->slots.ref_frame_map[ref_id] = vsi->slot_id;
+	}
 
 	return 0;
 }
@@ -1674,39 +1677,39 @@ static void vdec_av1_slice_setup_ref(
 	struct vdec_av1_slice_seq_header *seq = &frame->seq;
 	struct vdec_av1_slice_frame_info *cur_frame_info =
 		&slots->frame_info[vsi->slot_id];
-	int i, j;
+	int i, slot_id;
 
 	if (uh->frame_is_intra)
 		return;
 
 	for (i = 0; i < AV1_REFS_PER_FRAME; i++) {
-		frame->order_hints[i] = 0;
-		frame->ref_frame_valid[i] = 0;
-		pfc->ref_idx[i] = ctrl_fh->reference_frame_ts[i];
+		int ref_idx = ctrl_fh->ref_frame_idx[i];
+		pfc->ref_idx[i] = ctrl_fh->reference_frame_ts[ref_idx];
 
-		for (j = 0; j < AV1_MAX_FRAME_BUF_COUNT; j++) {
-			if (slots->timestamp[j] == ctrl_fh->reference_frame_ts[i]) {
-				frame->frame_refs[i].ref_fb_idx = j;
-				vdec_av1_slice_setup_scale_factors(&frame->frame_refs[i],
-					&slots->frame_info[j], uh);
-				if (!seq->enable_order_hint)
-					frame->ref_frame_sign_bias[i + 1] = 0;
-				else
-					frame->ref_frame_sign_bias[i + 1] =
-						vdec_av1_slice_get_relative_dist(
-						slots->frame_info[j].order_hint, uh->order_hint,
-						seq->enable_order_hint, seq->order_hint_bits) <= 0 ?
-						0 : 1;
-
-				frame->order_hints[i] = ctrl_fh->order_hints[i + 1];
-				cur_frame_info->order_hints[i] = frame->order_hints[i];
-				frame->ref_frame_valid[i] = 1;
-				break;
-			}
-		}
-		if (j == AV1_MAX_FRAME_BUF_COUNT)
+                slot_id = slots->ref_frame_map[ref_idx];
+		if (slot_id == AV1_INVALID_IDX) {
 			mtk_v4l2_err("cannot match reference[%d] 0x%lx\n",
-				i, ctrl_fh->reference_frame_ts[i]);
+				i, ctrl_fh->reference_frame_ts[ref_idx]);
+                        frame->order_hints[i] = 0;
+                        frame->ref_frame_valid[i] = 0;
+                        continue;
+                }
+
+                frame->frame_refs[i].ref_fb_idx = slot_id;
+                vdec_av1_slice_setup_scale_factors(&frame->frame_refs[i],
+                                &slots->frame_info[slot_id], uh);
+                if (!seq->enable_order_hint)
+                        frame->ref_frame_sign_bias[i + 1] = 0;
+                else
+                        frame->ref_frame_sign_bias[i + 1] =
+                                vdec_av1_slice_get_relative_dist(
+                                                slots->frame_info[slot_id].order_hint, uh->order_hint,
+                                                seq->enable_order_hint, seq->order_hint_bits) <= 0 ?
+                                0 : 1;
+
+                frame->order_hints[i] = ctrl_fh->order_hints[i + 1];
+                cur_frame_info->order_hints[i] = frame->order_hints[i];
+                frame->ref_frame_valid[i] = 1;
 	}
 }
 
@@ -1753,7 +1756,7 @@ static int vdec_av1_slice_setup_pfc(
 	vdec_av1_slice_setup_uh(instance, &vsi->frame, ctrl_fh);
 	vdec_av1_slice_setup_operating_mode(instance, &vsi->frame);
 	vdec_av1_slice_setup_state(vsi);
-	vdec_av1_slice_setup_slot(instance, vsi);
+	vdec_av1_slice_setup_slot(instance, vsi, ctrl_fh);
 	vdec_av1_slice_setup_ref(pfc, ctrl_fh);
 	vdec_av1_slice_get_previous(vsi);
 
@@ -2358,7 +2361,6 @@ static int vdec_av1_slice_lat_decode(void *h_vdec,
 	if (!instance->inneracing_mode)
 		vdec_msg_queue_qbuf(&ctx->dev->msg_queue_core_ctx, lat_buf);
 	memcpy_fromio(&instance->slots, &vsi->slots, sizeof(instance->slots));
-	vdec_av1_slice_update_ref_slot(vsi, &instance->slots);
 
 	return 0;
 }
