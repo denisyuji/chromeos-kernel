@@ -10,6 +10,10 @@
 	compatible = "google,dojo-rev0", "google,dojo", "mediatek,mt8195";
 };
 
+&pcie0 {
+	status = "okay";
+};
+
 &pio_default {
 	pins-low-power-hdmi-disable {
 		pinmux = <PINMUX_GPIO31__FUNC_GPIO31>,

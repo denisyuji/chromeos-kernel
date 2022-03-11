@@ -10,6 +10,10 @@
 	compatible = "google,tomato-rev1", "google,tomato", "mediatek,mt8195";
 };
 
+&pcie0 {
+	status = "okay";
+};
+
 &ts_10 {
 	status = "okay";
 };
