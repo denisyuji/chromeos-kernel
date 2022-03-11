@@ -10,6 +10,11 @@
 	compatible = "google,dojo-rev0", "google,dojo", "mediatek,mt8195";
 };
 
+&audio_codec {
+	compatible = "realtek,rt5682i";
+	realtek,btndet-delay = <16>;
+};
+
 &pcie0 {
 	status = "okay";
 };
@@ -24,6 +29,11 @@
 		input-enable;
 		bias-pull-down;
 	};
+};
+
+&sound {
+	compatible = "mediatek,mt8195_mt6359_rt1019_rt5682";
+	model = "mt8195_r1019_5682";
 };
 
 &ts_15 {
