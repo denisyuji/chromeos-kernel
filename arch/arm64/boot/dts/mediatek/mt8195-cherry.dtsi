@@ -280,6 +280,29 @@
 	};
 };
 
+&dp_intf1 {
+	status = "okay";
+
+	port {
+		dp_intf1_out: endpoint {
+			remote-endpoint = <&dptx_in>;
+		};
+	};
+};
+
+&dp_tx {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&dptx_pin>;
+
+	port {
+		dptx_in: endpoint {
+			remote-endpoint = <&dp_intf1_out>;
+		};
+	};
+};
+
 &edp_tx {
 	status = "okay";
 
@@ -840,6 +863,13 @@
 		pins-disp-pwm {
 			pinmux = <PINMUX_GPIO82__FUNC_GPIO82>,
 				 <PINMUX_GPIO97__FUNC_DISP_PWM0>;
+		};
+	};
+
+	dptx_pin: dptx-default-pins {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO18__FUNC_DP_TX_HPD>;
+			bias-pull-up;
 		};
 	};
 
