@@ -3210,12 +3210,20 @@ AV1 Tx mode as described in section 6.8.21 "TX mode semantics" of :ref:`av1`.
       - ``gold_frame_idx``
       - Specifies the reference frame to use for GOLDEN_FRAME.
     * - __u64
-      - ``reference_frame_ts[V4L2_AV1_NUM_REF_FRAMES]``
+      - ``reference_frame_ts[V4L2_AV1_TOTAL_REFS_PER_FRAME]``
       - the V4L2 timestamp for each of the reference frames enumerated in
-        enum :c:type:`v4l2_av1_reference_frame`. The timestamp refers to the
-        ``timestamp`` field in struct :c:type:`v4l2_buffer`. Use the
+        enum :c:type:`v4l2_av1_reference_frame` starting at
+        ``V4L2_AV1_REF_LAST_FRAME``. This represent the state of reference
+        slot as describe in the spec and updated by userland through the
+        `Reference frame update process` in section 7.20. The timestamp refers
+        to the ``timestamp`` field in struct :c:type:`v4l2_buffer`. Use the
         :c:func:`v4l2_timeval_to_ns()` function to convert the struct
         :c:type:`timeval` in struct :c:type:`v4l2_buffer` to a __u64.
+    * - __u8
+      - ``ref_frame_idx[V4L2_AV1_REFS_PER_FRAME]``
+      - an index into ``reference_frame_ts`` representing the ordered list of
+        references used by inter-frame. Matches the bitstream syntax
+        element of the same name.
     * - __u8
       - ``skip_mode_frame[2]``
       - Specifies the frames to use for compound prediction when skip_mode is

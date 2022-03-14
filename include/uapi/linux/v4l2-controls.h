@@ -2654,7 +2654,9 @@ enum v4l2_av1_tx_mode {
  * @last_frame_idx: specifies the reference frame to use for LAST_FRAME.
  * @gold_frame_idx: specifies the reference frame to use for GOLDEN_FRAME.
  * refs
- * @reference_frame_ts: the V4L2 timestamp for each of the reference frames
+ * @reference_frame_ts: the V4L2 timestamp of the reference frame slots.
+ * @ref_frame_idx: index into @reference_frame_ts fo the frames used by
+ *   inter-frames.
  * enumerated in &v4l2_av1_reference_frame. The timestamp refers to the
  * timestamp field in struct v4l2_buffer. Use v4l2_timeval_to_ns() to convert
  * the struct timeval to a __u64.
@@ -2689,7 +2691,8 @@ struct v4l2_ctrl_av1_frame_header {
 	__u32 order_hints[V4L2_AV1_NUM_REF_FRAMES];
 	__s8 last_frame_idx;
 	__s8 gold_frame_idx;
-	__u64 reference_frame_ts[V4L2_AV1_REFS_PER_FRAME];
+	__u64 reference_frame_ts[V4L2_AV1_TOTAL_REFS_PER_FRAME];
+	__u8 ref_frame_idx[V4L2_AV1_REFS_PER_FRAME];
 	__u8 skip_mode_frame[2];
 };
 
