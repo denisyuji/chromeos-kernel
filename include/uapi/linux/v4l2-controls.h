@@ -2107,105 +2107,6 @@ struct v4l2_ctrl_av1_tile_group_entry {
 	__u32 tile_col;
 };
 
-#define V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN BIT(0)
-#define V4L2_AV1_FILM_GRAIN_FLAG_UPDATE_GRAIN BIT(1)
-#define V4L2_AV1_FILM_GRAIN_FLAG_CHROMA_SCALING_FROM_LUMA BIT(2)
-#define V4L2_AV1_FILM_GRAIN_FLAG_OVERLAP BIT(3)
-#define V4L2_AV1_FILM_GRAIN_FLAG_CLIP_TO_RESTRICTED_RANGE BIT(4)
-
-/**
- * struct v4l2_av1_film_grain - AV1 Film Grain parameters.
- *
- * Film grain parameters as specified by section 6.8.20 of the AV1
-   Specification.
- *
- * @flags: see V4L2_AV1_FILM_GRAIN_{}.
- * @grain_seed: specifies the starting value for the pseudo-random numbers used
- * during film grain synthesis.
- * @film_grain_params_ref_idx: indicates which reference frame contains the
- * film grain parameters to be used for this frame.
- * @num_y_points: specifies the number of points for the piece-wise linear
- * scaling function of the luma component.
- * @point_y_value: represents the x (luma value) coordinate for the i-th point
- * of the piecewise linear scaling function for luma component. The values are
- * signaled on the scale of 0..255. (In case of 10 bit video, these values
- * correspond to luma values divided by 4. In case of 12 bit video, these values
- * correspond to luma values divided by 16.).
- * @point_y_scaling:  represents the scaling (output) value for the i-th point
- * of the piecewise linear scaling function for luma component.
- * @num_cb_points: specifies the number of points for the piece-wise linear
- * scaling function of the cb component.
- * @point_cb_value: represents the x coordinate for the i-th point of the
- * piece-wise linear scaling function for cb component. The values are signaled
- * on the scale of 0..255.
- * @point_cb_scaling: represents the scaling (output) value for the i-th point
- * of the piecewise linear scaling function for cb component.
- * @num_cr_points: specifies represents the number of points for the piece-wise
- * linear scaling function of the cr component.
- * @point_cr_value:  represents the x coordinate for the i-th point of the
- * piece-wise linear scaling function for cr component. The values are signaled
- * on the scale of 0..255.
- * @point_cr_scaling:  represents the scaling (output) value for the i-th point
- * of the piecewise linear scaling function for cr component.
- * @grain_scaling_minus_8: represents the shift – 8 applied to the values of the
- * chroma component. The grain_scaling_minus_8 can take values of 0..3 and
- * determines the range and quantization step of the standard deviation of film
- * grain.
- * @ar_coeff_lag: specifies the number of auto-regressive coefficients for luma
- * and chroma.
- * @ar_coeffs_y_plus_128: specifies auto-regressive coefficients used for the Y
- * plane.
- * @ar_coeffs_cb_plus_128: specifies auto-regressive coefficients used for the U
- * plane.
- * @ar_coeffs_cr_plus_128: specifies auto-regressive coefficients used for the V
- * plane.
- * @ar_coeff_shift_minus_6: specifies the range of the auto-regressive
- * coefficients. Values of 0, 1, 2, and 3 correspond to the ranges for
- * auto-regressive coefficients of [-2, 2), [-1, 1), [-0.5, 0.5) and [-0.25,
- * 0.25) respectively.
- * @grain_scale_shift: specifies how much the Gaussian random numbers should be
- * scaled down during the grain synthesis process.
- * @cb_mult: represents a multiplier for the cb component used in derivation of
- * the input index to the cb component scaling function.
- * @cb_luma_mult: represents a multiplier for the average luma component used in
- * derivation of the input index to the cb component scaling function.
- * @cb_offset: represents an offset used in derivation of the input index to the
- * cb component scaling function.
- * @cr_mult: represents a multiplier for the cr component used in derivation of
- * the input index to the cr component scaling function.
- * @cr_luma_mult: represents a multiplier for the average luma component used in
- * derivation of the input index to the cr component scaling function.
- * @cr_offset: represents an offset used in derivation of the input index to the
- * cr component scaling function.
- */
-struct v4l2_av1_film_grain {
-	__u8 flags;
-	__u16 grain_seed;
-	__u8 film_grain_params_ref_idx;
-	__u8 num_y_points;
-	__u8 point_y_value[V4L2_AV1_MAX_NUM_Y_POINTS];
-	__u8 point_y_scaling[V4L2_AV1_MAX_NUM_Y_POINTS];
-	__u8 num_cb_points;
-	__u8 point_cb_value[V4L2_AV1_MAX_NUM_CB_POINTS];
-	__u8 point_cb_scaling[V4L2_AV1_MAX_NUM_CB_POINTS];
-	__u8 num_cr_points;
-	__u8 point_cr_value[V4L2_AV1_MAX_NUM_CR_POINTS];
-	__u8 point_cr_scaling[V4L2_AV1_MAX_NUM_CR_POINTS];
-	__u8 grain_scaling_minus_8;
-	__u8 ar_coeff_lag;
-	__u8 ar_coeffs_y_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
-	__u8 ar_coeffs_cb_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
-	__u8 ar_coeffs_cr_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
-	__u8 ar_coeff_shift_minus_6;
-	__u8 grain_scale_shift;
-	__u8 cb_mult;
-	__u8 cb_luma_mult;
-	__u16 cb_offset;
-	__u8 cr_mult;
-	__u8 cr_luma_mult;
-	__u16 cr_offset;
-};
-
 /**
  * enum v4l2_av1_warp_model - AV1 Warp Model as described in section 3
  * "Symbols and abbreviated terms" of the AV1 Specification.
@@ -2628,7 +2529,6 @@ struct v4l2_ctrl_av1_frame_header {
 	struct v4l2_av1_cdef cdef;
 	struct v4l2_av1_loop_restoration loop_restoration;
 	struct v4l2_av1_global_motion global_motion;
-	struct v4l2_av1_film_grain film_grain;
 	__u32 flags;
 	enum v4l2_av1_frame_type frame_type;
 	__u32 order_hint;
@@ -2733,6 +2633,107 @@ enum v4l2_stateless_av1_level {
 	V4L2_STATELESS_AV1_LEVEL_7_2 = 22,
 	V4L2_STATELESS_AV1_LEVEL_7_3 = 23
 };
+
+#define V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN BIT(0)
+#define V4L2_AV1_FILM_GRAIN_FLAG_UPDATE_GRAIN BIT(1)
+#define V4L2_AV1_FILM_GRAIN_FLAG_CHROMA_SCALING_FROM_LUMA BIT(2)
+#define V4L2_AV1_FILM_GRAIN_FLAG_OVERLAP BIT(3)
+#define V4L2_AV1_FILM_GRAIN_FLAG_CLIP_TO_RESTRICTED_RANGE BIT(4)
+
+/**
+ * struct v4l2_av1_film_grain - AV1 Film Grain parameters.
+ *
+ * Film grain parameters as specified by section 6.8.20 of the AV1
+   Specification.
+ *
+ * @flags: see V4L2_AV1_FILM_GRAIN_{}.
+ * @grain_seed: specifies the starting value for the pseudo-random numbers used
+ * during film grain synthesis.
+ * @film_grain_params_ref_idx: indicates which reference frame contains the
+ * film grain parameters to be used for this frame.
+ * @num_y_points: specifies the number of points for the piece-wise linear
+ * scaling function of the luma component.
+ * @point_y_value: represents the x (luma value) coordinate for the i-th point
+ * of the piecewise linear scaling function for luma component. The values are
+ * signaled on the scale of 0..255. (In case of 10 bit video, these values
+ * correspond to luma values divided by 4. In case of 12 bit video, these values
+ * correspond to luma values divided by 16.).
+ * @point_y_scaling:  represents the scaling (output) value for the i-th point
+ * of the piecewise linear scaling function for luma component.
+ * @num_cb_points: specifies the number of points for the piece-wise linear
+ * scaling function of the cb component.
+ * @point_cb_value: represents the x coordinate for the i-th point of the
+ * piece-wise linear scaling function for cb component. The values are signaled
+ * on the scale of 0..255.
+ * @point_cb_scaling: represents the scaling (output) value for the i-th point
+ * of the piecewise linear scaling function for cb component.
+ * @num_cr_points: specifies represents the number of points for the piece-wise
+ * linear scaling function of the cr component.
+ * @point_cr_value:  represents the x coordinate for the i-th point of the
+ * piece-wise linear scaling function for cr component. The values are signaled
+ * on the scale of 0..255.
+ * @point_cr_scaling:  represents the scaling (output) value for the i-th point
+ * of the piecewise linear scaling function for cr component.
+ * @grain_scaling_minus_8: represents the shift – 8 applied to the values of the
+ * chroma component. The grain_scaling_minus_8 can take values of 0..3 and
+ * determines the range and quantization step of the standard deviation of film
+ * grain.
+ * @ar_coeff_lag: specifies the number of auto-regressive coefficients for luma
+ * and chroma.
+ * @ar_coeffs_y_plus_128: specifies auto-regressive coefficients used for the Y
+ * plane.
+ * @ar_coeffs_cb_plus_128: specifies auto-regressive coefficients used for the U
+ * plane.
+ * @ar_coeffs_cr_plus_128: specifies auto-regressive coefficients used for the V
+ * plane.
+ * @ar_coeff_shift_minus_6: specifies the range of the auto-regressive
+ * coefficients. Values of 0, 1, 2, and 3 correspond to the ranges for
+ * auto-regressive coefficients of [-2, 2), [-1, 1), [-0.5, 0.5) and [-0.25,
+ * 0.25) respectively.
+ * @grain_scale_shift: specifies how much the Gaussian random numbers should be
+ * scaled down during the grain synthesis process.
+ * @cb_mult: represents a multiplier for the cb component used in derivation of
+ * the input index to the cb component scaling function.
+ * @cb_luma_mult: represents a multiplier for the average luma component used in
+ * derivation of the input index to the cb component scaling function.
+ * @cb_offset: represents an offset used in derivation of the input index to the
+ * cb component scaling function.
+ * @cr_mult: represents a multiplier for the cr component used in derivation of
+ * the input index to the cr component scaling function.
+ * @cr_luma_mult: represents a multiplier for the average luma component used in
+ * derivation of the input index to the cr component scaling function.
+ * @cr_offset: represents an offset used in derivation of the input index to the
+ * cr component scaling function.
+ */
+#define V4L2_CID_STATELESS_AV1_FILM_GRAIN (V4L2_CID_CODEC_STATELESS_BASE + 409)
+struct v4l2_ctrl_av1_film_grain {
+	__u8 flags;
+	__u16 grain_seed;
+	__u8 film_grain_params_ref_idx;
+	__u8 num_y_points;
+	__u8 point_y_value[V4L2_AV1_MAX_NUM_Y_POINTS];
+	__u8 point_y_scaling[V4L2_AV1_MAX_NUM_Y_POINTS];
+	__u8 num_cb_points;
+	__u8 point_cb_value[V4L2_AV1_MAX_NUM_CB_POINTS];
+	__u8 point_cb_scaling[V4L2_AV1_MAX_NUM_CB_POINTS];
+	__u8 num_cr_points;
+	__u8 point_cr_value[V4L2_AV1_MAX_NUM_CR_POINTS];
+	__u8 point_cr_scaling[V4L2_AV1_MAX_NUM_CR_POINTS];
+	__u8 grain_scaling_minus_8;
+	__u8 ar_coeff_lag;
+	__u8 ar_coeffs_y_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
+	__u8 ar_coeffs_cb_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
+	__u8 ar_coeffs_cr_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA];
+	__u8 ar_coeff_shift_minus_6;
+	__u8 grain_scale_shift;
+	__u8 cb_mult;
+	__u8 cb_luma_mult;
+	__u16 cb_offset;
+	__u8 cr_mult;
+	__u8 cr_luma_mult;
+	__u16 cr_offset;
+};
+
 
 #define V4L2_CID_COLORIMETRY_CLASS_BASE	(V4L2_CTRL_CLASS_COLORIMETRY | 0x900)
 #define V4L2_CID_COLORIMETRY_CLASS	(V4L2_CTRL_CLASS_COLORIMETRY | 1)

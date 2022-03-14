@@ -2260,157 +2260,6 @@ This structure contains all loop filter related parameters. See sections
       - Specifies the column of the current tile. Equivalent to "TileColumn" in
         :ref:`av1`.
 
-.. c:type:: v4l2_av1_film_grain
-
-.. cssclass:: longtable
-
-.. tabularcolumns:: |p{1.5cm}|p{5.8cm}|p{10.0cm}|
-
-.. flat-table:: struct v4l2_av1_film_grain
-    :header-rows:  0
-    :stub-columns: 0
-    :widths:       1 1 2
-
-    * - __u8
-      - ``flags``
-      - See :ref:`AV1 Film Grain Flags <av1_film_grain_flags>`.
-    * - __u16
-      - ``grain_seed``
-      - Specifies the starting value for the pseudo-random numbers used during
-	film grain synthesis.
-    * - __u8
-      - ``film_grain_params_ref_idx``
-      - Indicates which reference frame contains the film grain parameters to be
-	used for this frame.
-    * - __u8
-      - ``num_y_points``
-      - Specifies the number of points for the piece-wise linear scaling
-	function of the luma component.
-    * - __u8
-      - ``point_y_value[V4L2_AV1_MAX_NUM_Y_POINTS]``
-      - Represents the x (luma value) coordinate for the i-th point
-        of the piecewise linear scaling function for luma component. The values
-        are signaled on the scale of 0..255. (In case of 10 bit video, these
-        values correspond to luma values divided by 4. In case of 12 bit video,
-        these values correspond to luma values divided by 16.).
-    * - __u8
-      - ``point_y_scaling[V4L2_AV1_MAX_NUM_Y_POINTS]``
-      - Represents the scaling (output) value for the i-th point
-	of the piecewise linear scaling function for luma component.
-    * - __u8
-      - ``num_cb_points``
-      -  Specifies the number of points for the piece-wise linear scaling
-         function of the cb component.
-    * - __u8
-      - ``point_cb_value[V4L2_AV1_MAX_NUM_CB_POINTS]``
-      - Represents the x coordinate for the i-th point of the
-        piece-wise linear scaling function for cb component. The values are
-        signaled on the scale of 0..255.
-    * - __u8
-      - ``point_cb_scaling[V4L2_AV1_MAX_NUM_CB_POINTS]``
-      - Represents the scaling (output) value for the i-th point of the
-        piecewise linear scaling function for cb component.
-    * - __u8
-      - ``num_cr_points``
-      - Represents the number of points for the piece-wise
-        linear scaling function of the cr component.
-    * - __u8
-      - ``point_cr_value[V4L2_AV1_MAX_NUM_CR_POINTS]``
-      - Represents the x coordinate for the i-th point of the
-        piece-wise linear scaling function for cr component. The values are
-        signaled on the scale of 0..255.
-    * - __u8
-      - ``point_cr_scaling[V4L2_AV1_MAX_NUM_CR_POINTS]``
-      - Represents the scaling (output) value for the i-th point of the
-        piecewise linear scaling function for cr component.
-    * - __u8
-      - ``grain_scaling_minus_8``
-      - Represents the shift – 8 applied to the values of the chroma component.
-        The grain_scaling_minus_8 can take values of 0..3 and determines the
-        range and quantization step of the standard deviation of film grain.
-    * - __u8
-      - ``ar_coeff_lag``
-      - Specifies the number of auto-regressive coefficients for luma and
-	chroma.
-    * - __u8
-      - ``ar_coeffs_y_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
-      - Specifies auto-regressive coefficients used for the Y plane.
-    * - __u8
-      - ``ar_coeffs_cb_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
-      - Specifies auto-regressive coefficients used for the U plane.
-    * - __u8
-      - ``ar_coeffs_cr_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
-      - Specifies auto-regressive coefficients used for the V plane.
-    * - __u8
-      - ``ar_coeff_shift_minus_6``
-      - Specifies the range of the auto-regressive coefficients. Values of 0,
-        1, 2, and 3 correspond to the ranges for auto-regressive coefficients of
-        [-2, 2), [-1, 1), [-0.5, 0.5) and [-0.25, 0.25) respectively.
-    * - __u8
-      - ``grain_scale_shift``
-      - Specifies how much the Gaussian random numbers should be scaled down
-	during the grain synthesis process.
-    * - __u8
-      - ``cb_mult``
-      - Represents a multiplier for the cb component used in derivation of the
-	input index to the cb component scaling function.
-    * - __u8
-      - ``cb_luma_mult``
-      - Represents a multiplier for the average luma component used in
-	derivation of the input index to the cb component scaling function..
-    * - __u16
-      - ``cb_offset``
-      - Represents an offset used in derivation of the input index to the
-	cb component scaling function.
-    * - __u8
-      - ``cr_mult``
-      - Represents a multiplier for the cb component used in derivation of the
-	input index to the cr component scaling function.
-    * - __u8
-      - ``cr_luma_mult``
-      - Represents a multiplier for the average luma component used in
-        derivation of the input index to the cr component scaling function.
-    * - __u16
-      - ``cr_offset``
-      - Represents an offset used in derivation of the input index to the
-        cr component scaling function.
-
-.. _av1_film_grain_flags:
-
-``AV1 Film Grain Flags``
-
-.. cssclass:: longtable
-
-.. flat-table::
-    :header-rows:  0
-    :stub-columns: 0
-    :widths:       1 1 2
-
-    * - ``V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN``
-      - 0x00000001
-      - If set, specifies that film grain should be added to this frame. If not
-	set, specifies that film grain should not be added.
-    * - ``V4L2_AV1_FILM_GRAIN_FLAG_UPDATE_GRAIN``
-      - 0x00000002
-      - If set, means that a new set of parameters should be sent. If not set,
-	specifies that the previous set of parameters should be used.
-    * - ``V4L2_AV1_FILM_GRAIN_FLAG_CHROMA_SCALING_FROM_LUMA``
-      - 0x00000004
-      - If set, specifies that the chroma scaling is inferred from the luma
-	scaling.
-    * - ``V4L2_AV1_FILM_GRAIN_FLAG_OVERLAP``
-      - 0x00000008
-      - If set, indicates that the overlap between film grain blocks shall be
-	applied. If not set, indicates that the overlap between film grain blocks
-	shall not be applied.
-    * - ``V4L2_AV1_FILM_GRAIN_FLAG_CLIP_TO_RESTRICTED_RANGE``
-      - 0x00000010
-      - If set, indicates that clipping to the restricted (studio) range shall
-        be applied to the sample values after adding the film grain (see the
-        semantics for color_range for an explanation of studio swing). If not
-        set, indicates that clipping to the full range shall be applied to the
-        sample values after adding the film grain.
-
 .. c:type:: v4l2_av1_warp_model
 
 	AV1 Warp Model as described in section 3 "Symbols and abbreviated terms" of
@@ -3095,9 +2944,6 @@ AV1 Tx mode as described in section 6.8.21 "TX mode semantics" of :ref:`av1`.
     * - struct :c:type:`v4l2_av1_loop_global_motion`
       - ``global_motion``
       - Global motion params
-    * - struct :c:type:`v4l2_av1_loop_film_grain`
-      - ``film_grain``
-      - Film grain params
     * - __u32
       - ``flags``
       - See
@@ -3286,3 +3132,158 @@ AV1 Tx mode as described in section 6.8.21 "TX mode semantics" of :ref:`av1`.
       - If set, indicates that only two reference frames are explicitly
         signaled. If not set, indicates that all reference frames are explicitly
         signaled.
+
+``V4L2_CID_STATELESS_AV1_FILM_GRAIN (struct)``
+    Represents the optional film grain parameters. See section
+    6.8.20. "Film grain params semantics" of :ref:`av1` for more details.
+
+.. c:type:: v4l2_ctrl_av1_film_grain
+
+.. cssclass:: longtable
+
+.. tabularcolumns:: |p{1.5cm}|p{5.8cm}|p{10.0cm}|
+
+.. flat-table:: struct v4l2_av1_film_grain
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - __u8
+      - ``flags``
+      - See :ref:`AV1 Film Grain Flags <av1_film_grain_flags>`.
+    * - __u16
+      - ``grain_seed``
+      - Specifies the starting value for the pseudo-random numbers used during
+	film grain synthesis.
+    * - __u8
+      - ``film_grain_params_ref_idx``
+      - Indicates which reference frame contains the film grain parameters to be
+	used for this frame.
+    * - __u8
+      - ``num_y_points``
+      - Specifies the number of points for the piece-wise linear scaling
+	function of the luma component.
+    * - __u8
+      - ``point_y_value[V4L2_AV1_MAX_NUM_Y_POINTS]``
+      - Represents the x (luma value) coordinate for the i-th point
+        of the piecewise linear scaling function for luma component. The values
+        are signaled on the scale of 0..255. (In case of 10 bit video, these
+        values correspond to luma values divided by 4. In case of 12 bit video,
+        these values correspond to luma values divided by 16.).
+    * - __u8
+      - ``point_y_scaling[V4L2_AV1_MAX_NUM_Y_POINTS]``
+      - Represents the scaling (output) value for the i-th point
+	of the piecewise linear scaling function for luma component.
+    * - __u8
+      - ``num_cb_points``
+      -  Specifies the number of points for the piece-wise linear scaling
+         function of the cb component.
+    * - __u8
+      - ``point_cb_value[V4L2_AV1_MAX_NUM_CB_POINTS]``
+      - Represents the x coordinate for the i-th point of the
+        piece-wise linear scaling function for cb component. The values are
+        signaled on the scale of 0..255.
+    * - __u8
+      - ``point_cb_scaling[V4L2_AV1_MAX_NUM_CB_POINTS]``
+      - Represents the scaling (output) value for the i-th point of the
+        piecewise linear scaling function for cb component.
+    * - __u8
+      - ``num_cr_points``
+      - Represents the number of points for the piece-wise
+        linear scaling function of the cr component.
+    * - __u8
+      - ``point_cr_value[V4L2_AV1_MAX_NUM_CR_POINTS]``
+      - Represents the x coordinate for the i-th point of the
+        piece-wise linear scaling function for cr component. The values are
+        signaled on the scale of 0..255.
+    * - __u8
+      - ``point_cr_scaling[V4L2_AV1_MAX_NUM_CR_POINTS]``
+      - Represents the scaling (output) value for the i-th point of the
+        piecewise linear scaling function for cr component.
+    * - __u8
+      - ``grain_scaling_minus_8``
+      - Represents the shift – 8 applied to the values of the chroma component.
+        The grain_scaling_minus_8 can take values of 0..3 and determines the
+        range and quantization step of the standard deviation of film grain.
+    * - __u8
+      - ``ar_coeff_lag``
+      - Specifies the number of auto-regressive coefficients for luma and
+	chroma.
+    * - __u8
+      - ``ar_coeffs_y_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
+      - Specifies auto-regressive coefficients used for the Y plane.
+    * - __u8
+      - ``ar_coeffs_cb_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
+      - Specifies auto-regressive coefficients used for the U plane.
+    * - __u8
+      - ``ar_coeffs_cr_plus_128[V4L2_AV1_MAX_NUM_POS_LUMA]``
+      - Specifies auto-regressive coefficients used for the V plane.
+    * - __u8
+      - ``ar_coeff_shift_minus_6``
+      - Specifies the range of the auto-regressive coefficients. Values of 0,
+        1, 2, and 3 correspond to the ranges for auto-regressive coefficients of
+        [-2, 2), [-1, 1), [-0.5, 0.5) and [-0.25, 0.25) respectively.
+    * - __u8
+      - ``grain_scale_shift``
+      - Specifies how much the Gaussian random numbers should be scaled down
+	during the grain synthesis process.
+    * - __u8
+      - ``cb_mult``
+      - Represents a multiplier for the cb component used in derivation of the
+	input index to the cb component scaling function.
+    * - __u8
+      - ``cb_luma_mult``
+      - Represents a multiplier for the average luma component used in
+	derivation of the input index to the cb component scaling function..
+    * - __u16
+      - ``cb_offset``
+      - Represents an offset used in derivation of the input index to the
+	cb component scaling function.
+    * - __u8
+      - ``cr_mult``
+      - Represents a multiplier for the cb component used in derivation of the
+	input index to the cr component scaling function.
+    * - __u8
+      - ``cr_luma_mult``
+      - Represents a multiplier for the average luma component used in
+        derivation of the input index to the cr component scaling function.
+    * - __u16
+      - ``cr_offset``
+      - Represents an offset used in derivation of the input index to the
+        cr component scaling function.
+
+.. _av1_film_grain_flags:
+
+``AV1 Film Grain Flags``
+
+.. cssclass:: longtable
+
+.. flat-table::
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - ``V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN``
+      - 0x00000001
+      - If set, specifies that film grain should be added to this frame. If not
+	set, specifies that film grain should not be added.
+    * - ``V4L2_AV1_FILM_GRAIN_FLAG_UPDATE_GRAIN``
+      - 0x00000002
+      - If set, means that a new set of parameters should be sent. If not set,
+	specifies that the previous set of parameters should be used.
+    * - ``V4L2_AV1_FILM_GRAIN_FLAG_CHROMA_SCALING_FROM_LUMA``
+      - 0x00000004
+      - If set, specifies that the chroma scaling is inferred from the luma
+	scaling.
+    * - ``V4L2_AV1_FILM_GRAIN_FLAG_OVERLAP``
+      - 0x00000008
+      - If set, indicates that the overlap between film grain blocks shall be
+	applied. If not set, indicates that the overlap between film grain blocks
+	shall not be applied.
+    * - ``V4L2_AV1_FILM_GRAIN_FLAG_CLIP_TO_RESTRICTED_RANGE``
+      - 0x00000010
+      - If set, indicates that clipping to the restricted (studio) range shall
+        be applied to the sample values after adding the film grain (see the
+        semantics for color_range for an explanation of studio swing). If not
+        set, indicates that clipping to the full range shall be applied to the
+        sample values after adding the film grain.

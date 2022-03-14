@@ -62,6 +62,7 @@ struct video_device;
  * @p_av1_tile_group:		Pointer to an AV1 tile group.
  * @p_av1_tile_group_entry:	Pointer to an AV1 tile group entry.
  * @p_av1_frame_header:		Pointer to an AV1 frame header.
+ * @p_av1_film_grain:		Pointer to an AV1 film_grain.
  * @p:				Pointer to a compound value.
  * @p_const:			Pointer to a constant compound value.
  */
@@ -95,6 +96,7 @@ union v4l2_ctrl_ptr {
 	struct v4l2_ctrl_av1_tile_group *p_av1_tile_group;
 	struct v4l2_ctrl_av1_tile_group_entry *p_av1_tile_group_entry;
 	struct v4l2_ctrl_av1_frame_header *p_av1_frame_header;
+	struct v4l2_ctrl_av1_film_grain *p_av1_film_grain;
 	void *p;
 	const void *p_const;
 };

@@ -319,6 +319,9 @@ static void std_log(const struct v4l2_ctrl *ctrl)
 	case V4L2_CTRL_TYPE_AV1_FRAME_HEADER:
 		pr_cont("AV1_FRAME_HEADER");
 		break;
+	case V4L2_CTRL_TYPE_AV1_FILM_GRAIN:
+		pr_cont("AV1_FILM_GRAIN");
+		break;
 
 	default:
 		pr_cont("unknown type %d", ctrl->type);
@@ -432,7 +435,7 @@ static int validate_av1_loop_restauration(struct v4l2_av1_loop_restoration *lr)
 	return 0;
 }
 
-static int validate_av1_film_grain(struct v4l2_av1_film_grain *fg)
+static int validate_av1_film_grain(struct v4l2_ctrl_av1_film_grain *fg)
 {
 	u32 i;
 
@@ -484,9 +487,6 @@ static int validate_av1_frame_header(struct v4l2_ctrl_av1_frame_header *f)
 	if (ret)
 		return ret;
 	ret = validate_av1_loop_restauration(&f->loop_restoration);
-	if (ret)
-		return ret;
-	ret = validate_av1_film_grain(&f->film_grain);
 	if (ret)
 		return ret;
 
@@ -1019,6 +1019,9 @@ static int std_validate_compound(const struct v4l2_ctrl *ctrl, u32 idx,
 	case V4L2_CTRL_TYPE_AV1_TILE_GROUP:
 		return validate_av1_tile_group(p);
 	case V4L2_CTRL_TYPE_AV1_TILE_GROUP_ENTRY:
+		break;
+	case V4L2_CTRL_TYPE_AV1_FILM_GRAIN:
+		return validate_av1_film_grain(p);
 		break;
 	case V4L2_CTRL_TYPE_HEVC_SPS:
 		p_hevc_sps = p;
@@ -1779,6 +1782,9 @@ static struct v4l2_ctrl *v4l2_ctrl_new(struct v4l2_ctrl_handler *hdl,
 		break;
 	case V4L2_CTRL_TYPE_AV1_FRAME_HEADER:
 		elem_size = sizeof(struct v4l2_ctrl_av1_frame_header);
+		break;
+	case V4L2_CTRL_TYPE_AV1_FILM_GRAIN:
+		elem_size = sizeof(struct v4l2_ctrl_av1_film_grain);
 		break;
 	case V4L2_CTRL_TYPE_HEVC_SPS:
 		elem_size = sizeof(struct v4l2_ctrl_hevc_sps);

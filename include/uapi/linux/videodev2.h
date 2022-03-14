@@ -1769,6 +1769,7 @@ struct v4l2_ext_control {
 		struct v4l2_ctrl_av1_tile_group __user *p_av1_tile_group;
 		struct v4l2_ctrl_av1_tile_group_entry __user *p_av1_tile_group_entry;
 		struct v4l2_ctrl_av1_frame_header __user *p_av1_frame_header;
+		struct v4l2_ctrl_av1_film_grain __user *p_av1_film_grain;
 		void __user *ptr;
 	};
 } __attribute__ ((packed));
@@ -1841,6 +1842,7 @@ enum v4l2_ctrl_type {
 	V4L2_CTRL_TYPE_AV1_TILE_GROUP	    = 0x281,
 	V4L2_CTRL_TYPE_AV1_TILE_GROUP_ENTRY = 0x282,
 	V4L2_CTRL_TYPE_AV1_FRAME_HEADER	    = 0x283,
+	V4L2_CTRL_TYPE_AV1_FILM_GRAIN	    = 0x284,
 };
 
 /*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls */

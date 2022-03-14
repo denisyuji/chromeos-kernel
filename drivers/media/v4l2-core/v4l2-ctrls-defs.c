@@ -1224,6 +1224,7 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_STATELESS_AV1_FRAME_HEADER:		return "AV1 Frame Header parameters";
 	case V4L2_CID_STATELESS_AV1_PROFILE:			return "AV1 Profile";
 	case V4L2_CID_STATELESS_AV1_LEVEL:			return "AV1 Level";
+	case V4L2_CID_STATELESS_AV1_FILM_GRAIN:			return "AV1 Film Grain";
 
 	/* Colorimetry controls */
 	/* Keep the order of the 'case's the same as in v4l2-controls.h! */
@@ -1552,6 +1553,9 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 		break;
 	case V4L2_CID_STATELESS_AV1_FRAME_HEADER:
 		*type = V4L2_CTRL_TYPE_AV1_FRAME_HEADER;
+		break;
+	case V4L2_CID_STATELESS_AV1_FILM_GRAIN:
+		*type = V4L2_CTRL_TYPE_AV1_FILM_GRAIN;
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_SPS:
 		*type = V4L2_CTRL_TYPE_HEVC_SPS;
