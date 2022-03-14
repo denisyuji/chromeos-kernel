@@ -532,11 +532,6 @@ const char * const *v4l2_ctrl_get_menu(u32 id)
 		"7.3",
 		NULL,
 	};
-	static const char * const av1_operating_mode[] = {
-		"General decoding",
-		"Large scale tile decoding",
-		NULL,
-	};
 
 	static const char * const hevc_profile[] = {
 		"Main",
@@ -728,8 +723,6 @@ const char * const *v4l2_ctrl_get_menu(u32 id)
 		return av1_profile;
 	case V4L2_CID_STATELESS_AV1_LEVEL:
 		return av1_level;
-	case V4L2_CID_STATELESS_AV1_OPERATING_MODE:
-		return av1_operating_mode;
 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
 		return hevc_profile;
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
@@ -1228,12 +1221,9 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_STATELESS_AV1_SEQUENCE:			return "AV1 Sequence parameters";
 	case V4L2_CID_STATELESS_AV1_TILE_GROUP:		        return "AV1 Tile Group";
 	case V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY:	        return "AV1 Tile Group Entry";
-	case V4L2_CID_STATELESS_AV1_TILE_LIST:		        return "AV1 Tile List";
-	case V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY:		return "AV1 Tile List Entry";
 	case V4L2_CID_STATELESS_AV1_FRAME_HEADER:		return "AV1 Frame Header parameters";
 	case V4L2_CID_STATELESS_AV1_PROFILE:			return "AV1 Profile";
 	case V4L2_CID_STATELESS_AV1_LEVEL:			return "AV1 Level";
-	case V4L2_CID_STATELESS_AV1_OPERATING_MODE:		return "AV1 Operating Mode";
 
 	/* Colorimetry controls */
 	/* Keep the order of the 'case's the same as in v4l2-controls.h! */
@@ -1404,7 +1394,6 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_DETECT_MD_MODE:
 	case V4L2_CID_STATELESS_AV1_PROFILE:
 	case V4L2_CID_STATELESS_AV1_LEVEL:
-	case V4L2_CID_STATELESS_AV1_OPERATING_MODE:
 	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
 	case V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_TYPE:
@@ -1559,14 +1548,6 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 		break;
 	case V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY:
 		*type = V4L2_CTRL_TYPE_AV1_TILE_GROUP_ENTRY;
-		*flags |= V4L2_CTRL_FLAG_DYNAMIC_ARRAY;
-		break;
-	case V4L2_CID_STATELESS_AV1_TILE_LIST:
-		*type = V4L2_CTRL_TYPE_AV1_TILE_LIST;
-		*flags |= V4L2_CTRL_FLAG_DYNAMIC_ARRAY;
-		break;
-	case V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY:
-		*type = V4L2_CTRL_TYPE_AV1_TILE_LIST_ENTRY;
 		*flags |= V4L2_CTRL_FLAG_DYNAMIC_ARRAY;
 		break;
 	case V4L2_CID_STATELESS_AV1_FRAME_HEADER:

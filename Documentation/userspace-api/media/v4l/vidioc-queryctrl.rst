@@ -543,18 +543,6 @@ See also the examples in :ref:`control`.
       - n/a
       - A struct :c:type:`v4l2_ctrl_av1_tile_group`, containing AV1 Tile Group
 	OBU decoding parameters for stateless video decoders.
-    * - ``V4L2_CTRL_TYPE_AV1_TILE_LIST``
-      - n/a
-      - n/a
-      - n/a
-      - A struct :c:type:`v4l2_ctrl_av1_tile_list`, containing AV1 Tile List
-	OBU decoding parameters for stateless video decoders.
-    * - ``V4L2_CTRL_TYPE_AV1_TILE_LIST_ENTRY``
-      - n/a
-      - n/a
-      - n/a
-      - A struct :c:type:`v4l2_ctrl_av1_tile_list_entry`, containing AV1 Tile List
-	OBU decoding parameters for stateless video decoders.
     * - ``V4L2_CTRL_TYPE_AV1_FRAME_HEADER``
       - n/a
       - n/a
@@ -573,12 +561,6 @@ See also the examples in :ref:`control`.
       - n/a
       - A enum :c:type:`v4l2_ctrl_av1_level`, indicating what AV1 levels
 	an AV1 stateless decoder might support.
-    * - ``V4L2_CTRL_TYPE_AV1_OPERATING_MODE``
-      - n/a
-      - n/a
-      - n/a
-      - A enum :c:type:`v4l2_ctrl_av1_operating_mode`, indicating what AV1
-	operating modes an AV1 stateless decoder might support.
 
 .. raw:: latex
 

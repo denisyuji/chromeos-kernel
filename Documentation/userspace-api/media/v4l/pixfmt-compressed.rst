@@ -249,10 +249,6 @@ Compressed Formats
         ``V4L2_CID_STATELESS_AV1_SEQUENCE``, ``V4L2_CID_STATELESS_AV1_FRAME``,
         ``V4L2_CID_STATELESS_AV1_TILE_GROUP`` and
         ``V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY`` controls.
-        ``V4L2_CID_STATELESS_AV1_TILE_LIST`` and
-        ``V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY`` controls should be used if
-        the decoder supports large scale tile decoding mode as signaled by the
-        ``V4L2_CID_STATELESS_AV1_OPERATING_MODE`` control.
         See the :ref:`associated Codec Control IDs <v4l2-codec-stateless-av1>`.
         Exactly one output and one capture buffer must be provided for use with
         this pixel format. The output buffer must contain the appropriate number

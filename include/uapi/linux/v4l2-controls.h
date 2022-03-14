@@ -2107,57 +2107,6 @@ struct v4l2_ctrl_av1_tile_group_entry {
 	__u32 tile_col;
 };
 
-#define V4L2_CID_STATELESS_AV1_TILE_LIST (V4L2_CID_CODEC_STATELESS_BASE + 404)
-/**
- * struct v4l2_ctrl_av1_tile_list - AV1 Tile List header.
- *
- * Represents a tile list as seen in an AV1 Tile List OBU. Tile lists are used
- * in "Large Scale Tile Decode Mode". Note that tile_count_minus_1 should be at
- * most V4L2_AV1_MAX_TILE_COUNT - 1. A struct v4l2_ctrl_av1_tile_list instance
- * will refer to "tile_count_minus_1" + 1 instances of struct
- * v4l2_ctrl_av1_tile_list_entry.
- *
- * Each rendered frame may require at most two tile list OBU to be decodded. See
- * section "6.11.1. General tile list OBU semantics" for more details.
- *
- * @output_frame_width_in_tiles_minus_1: this field plus one is the width of the
- * output frame, in tile units.
- * @output_frame_height_in_tiles_minus_1: this field plus one is the height of
- * the output frame, in tile units.
- * @tile_count_minus_1: this field plus one is the number of tile_list_entry in
- * the list.
- */
-struct v4l2_ctrl_av1_tile_list {
-	__u8 output_frame_width_in_tiles_minus_1;
-	__u8 output_frame_height_in_tiles_minus_1;
-	__u8 tile_count_minus_1;
-};
-
-#define V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY (V4L2_CID_CODEC_STATELESS_BASE + 405)
-
-/**
- * struct v4l2_ctrl_av1_tile_list_entry - AV1 Tile List entry
- *
- * Represents a tile list entry as seen in an AV1 Tile List OBU. See section
- * 6.11.2. "Tile list entry semantics" of the AV1 Specification for more
- * details.
- *
- * @anchor_frame_idx: the index into an array AnchorFrames of the frames that
- * the tile uses for prediction.
- * @anchor_tile_row: the row coordinate of the tile in the frame that it
- * belongs, in tile units.
- * @anchor_tile_col: the column coordinate of the tile in the frame that it
- * belongs, in tile units.
- * @tile_data_size_minus_1: this field plus one is the size of the coded tile
- * data in bytes.
- */
-struct v4l2_ctrl_av1_tile_list_entry {
-	__u8 anchor_frame_idx;
-	__u8 anchor_tile_row;
-	__u8 anchor_tile_col;
-	__u8 tile_data_size_minus_1;
-};
-
 #define V4L2_AV1_FILM_GRAIN_FLAG_APPLY_GRAIN BIT(0)
 #define V4L2_AV1_FILM_GRAIN_FLAG_UPDATE_GRAIN BIT(1)
 #define V4L2_AV1_FILM_GRAIN_FLAG_CHROMA_SCALING_FROM_LUMA BIT(2)
@@ -2783,24 +2732,6 @@ enum v4l2_stateless_av1_level {
 	V4L2_STATELESS_AV1_LEVEL_7_1 = 21,
 	V4L2_STATELESS_AV1_LEVEL_7_2 = 22,
 	V4L2_STATELESS_AV1_LEVEL_7_3 = 23
-};
-
-/**
- * enum v4l2_stateless_av1_operating_mode - AV1 operating mode
- *
- * @V4L2_STATELESS_AV1_OPERATING_MODE_GENERAL_DECODING: input is a sequence of
- * OBUs, output is decoded frames)
- * @V4L2_STATELESS_AV1_OPERATING_MODE_LARGE_SCALE_TILE_DECODING: Large scale
- * tile decoding (input is a tile list OBU plus additional side information,
- * output is a decoded frame)
- *
- * Conveys the decoding mode the decoder is operating with. The two AV1 decoding
- * modes are specified in section 7 "Decoding process" of the AV1 specification.
- */
-#define V4L2_CID_STATELESS_AV1_OPERATING_MODE (V4L2_CID_CODEC_STATELESS_BASE + 409)
-enum v4l2_stateless_av1_operating_mode {
-	V4L2_STATELESS_AV1_OPERATING_MODE_GENERAL_DECODING = 0,
-	V4L2_STATELESS_AV1_OPERATING_MODE_LARGE_SCALE_TILE_DECODING = 1,
 };
 
 #define V4L2_CID_COLORIMETRY_CLASS_BASE	(V4L2_CTRL_CLASS_COLORIMETRY | 0x900)
