@@ -33,6 +33,8 @@ void mtk_mutex_set_mod(struct mtk_mutex *mutex,
 void mtk_mutex_set_sof(struct mtk_mutex *mutex,
 		       enum mtk_mutex_table_index idx);
 void mtk_mutex_enable(struct mtk_mutex *mutex);
+void mtk_mutex_enable_by_cmdq(struct mtk_mutex *mutex,
+			      void *pkt);
 void mtk_mutex_disable(struct mtk_mutex *mutex);
 void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 			   enum mtk_ddp_comp_id id);
