@@ -18,6 +18,7 @@ properties:
     enum:
       - mediatek,mt8192_mt6359_rt1015_rt5682
       - mediatek,mt8192_mt6359_rt1015p_rt5682
+      - mediatek,mt8192_mt6359_rt1015p_rt5682s
 
   mediatek,platform:
     $ref: "/schemas/types.yaml#/definitions/phandle"
@@ -26,6 +27,25 @@ properties:
   mediatek,hdmi-codec:
     $ref: "/schemas/types.yaml#/definitions/phandle"
     description: The phandle of HDMI codec.
+
+patternProperties:
+  "^mediatek,headset-codec$":
+    description: Holds subnode which indicates headset dai.
+    type: object
+    properties:
+      sound-dai:
+        $ref: /schemas/types.yaml#/definitions/phandle-array
+        description: List of phandles to the headset codec nodes.
+    additionalProperties: false
+
+  "^mediatek,speaker-codec$":
+    description: Holds subnode which indicates speaker dai.
+    type: object
+    properties:
+      sound-dai:
+        $ref: /schemas/types.yaml#/definitions/phandle-array
+        description: List of phandles to the speaker codec nodes.
+    additionalProperties: false
 
 additionalProperties: false
 
@@ -44,6 +64,15 @@ examples:
                         "aud_clk_mosi_on";
         pinctrl-0 = <&aud_clk_mosi_off>;
         pinctrl-1 = <&aud_clk_mosi_on>;
+
+        mediatek,headset-codec {
+            sound-dai = <&rt5682>;
+        };
+
+        mediatek,speaker-codec {
+            sound-dai = <&rt1015_l>,
+                        <&rt1015_r>;
+        };
     };
 
 ...
