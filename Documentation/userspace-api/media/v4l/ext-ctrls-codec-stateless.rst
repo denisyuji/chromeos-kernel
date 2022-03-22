@@ -2184,7 +2184,7 @@ This structure contains all loop filter related parameters. See sections
 ``V4L2_CID_STATELESS_AV1_TILE_GROUP (struct)``
     Represents a tile group as seen in an AV1 Tile Group OBU or Frame OBU. A
     v4l2_ctrl_av1_tile_group instance will refer to tg_end - tg_start instances
-    of struct :c:type:`struct v4l2_ctrl_av1_tile_group_entry`. See section
+    of struct :c:type:`v4l2_ctrl_av1_tile_group_entry`. See section
     6.10.1 "General tile group OBU semantics" in :ref:`av1` for more details.
 
 .. c:type:: v4l2_ctrl_av1_tile_group
