@@ -2480,7 +2480,6 @@ enum v4l2_av1_tx_mode {
  * @cdef: cdef params
  * @loop_restoration: loop restoration params
  * @global_motion: global motion params
- * @film_grain: film grain params
  * @flags: see V4L2_AV1_FRAME_HEADER_FLAG_{}
  * @frame_type: specifies the AV1 frame type
  * @order_hint: specifies OrderHintBits least significant bits of the expected
