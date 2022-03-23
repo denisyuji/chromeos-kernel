@@ -125,51 +125,6 @@ vivpu_dump_av1_tile_group_entry(struct vivpu_ctx *ctx, struct vivpu_run *run)
 }
 
 static void
-vivpu_dump_av1_tile_list(struct vivpu_ctx *ctx, struct vivpu_run *run)
-{
-	const struct v4l2_ctrl_av1_tile_list *tl;
-	u32 n;
-	u32 i;
-
-	n = vivpu_control_num_elems(ctx, V4L2_CID_STATELESS_AV1_TILE_LIST);
-	for (i = 0; i < n; i++) {
-		tl = &run->av1.tile_list[i];
-		dprintk(ctx->dev, "AV1 Tile List\n");
-		dprintk(ctx->dev, "output_frame_width_in_tiles_minus_1 %d\n",
-			tl->output_frame_width_in_tiles_minus_1);
-		dprintk(ctx->dev, "output_frame_height_in_tiles_minus_1 %d\n",
-			tl->output_frame_height_in_tiles_minus_1);
-		dprintk(ctx->dev, "tile_count_minus_1 %d\n",
-			tl->tile_count_minus_1);
-		dprintk(ctx->dev, "\n");
-	}
-
-	dprintk(ctx->dev, "\n");
-}
-
-static void
-vivpu_dump_av1_tile_list_entry(struct vivpu_ctx *ctx, struct vivpu_run *run)
-{
-	const struct v4l2_ctrl_av1_tile_list_entry *tle;
-	u32 n;
-	u32 i;
-
-	n = vivpu_control_num_elems(ctx, V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY);
-	for (i = 0; i < n; i++) {
-		tle = &run->av1.tl_entries[i];
-		dprintk(ctx->dev, "AV1 Tile List Entry\n");
-		dprintk(ctx->dev, "anchor_frame_idx %d\n", tle->anchor_frame_idx);
-		dprintk(ctx->dev, "anchor_tile_row %d\n", tle->anchor_tile_row);
-		dprintk(ctx->dev, "anchor_tile_col %d\n", tle->anchor_tile_col);
-		dprintk(ctx->dev, "tile_data_size_minus_1 %d\n",
-			tle->tile_data_size_minus_1);
-		dprintk(ctx->dev, "\n");
-	}
-
-	dprintk(ctx->dev, "\n");
-}
-
-static void
 vivpu_dump_av1_quantization(struct vivpu_ctx *ctx, struct vivpu_run *run)
 {
 	const struct v4l2_av1_quantization *q = &run->av1.frame_header->quantization;
@@ -433,8 +388,6 @@ static void vivpu_dump_av1_ctrls(struct vivpu_ctx *ctx, struct vivpu_run *run)
 	vivpu_dump_av1_frame(ctx, run);
 	vivpu_dump_av1_tile_group(ctx, run);
 	vivpu_dump_av1_tile_group_entry(ctx, run);
-	vivpu_dump_av1_tile_list(ctx, run);
-	vivpu_dump_av1_tile_list_entry(ctx, run);
 }
 
 void vivpu_device_run(void *priv)
@@ -462,10 +415,6 @@ void vivpu_device_run(void *priv)
 			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_GROUP);
 		run.av1.tg_entries =
 			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY);
-		run.av1.tile_list =
-			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_LIST);
-		run.av1.tl_entries =
-			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY);
 
 		vivpu_dump_av1_ctrls(ctx, &run);
 		vivpu_av1_check_reference_frames(ctx, &run);

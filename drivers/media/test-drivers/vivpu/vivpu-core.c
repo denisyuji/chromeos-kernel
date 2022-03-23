@@ -113,21 +113,10 @@ static const struct vivpu_control vivpu_controls[] = {
 		.cfg.dims = { V4L2_AV1_MAX_TILE_COUNT },
 	},
 	{
-		.cfg.id = V4L2_CID_STATELESS_AV1_TILE_LIST,
-		.cfg.dims = { V4L2_AV1_MAX_TILE_COUNT },
-	},
-	{
-		.cfg.id = V4L2_CID_STATELESS_AV1_TILE_LIST_ENTRY,
-		.cfg.dims = { V4L2_AV1_MAX_TILE_COUNT },
-	},
-	{
 		.cfg.id = V4L2_CID_STATELESS_AV1_PROFILE,
 	},
 	{
 		.cfg.id = V4L2_CID_STATELESS_AV1_LEVEL,
-	},
-	{
-		.cfg.id = V4L2_CID_STATELESS_AV1_OPERATING_MODE,
 	},
 };
 

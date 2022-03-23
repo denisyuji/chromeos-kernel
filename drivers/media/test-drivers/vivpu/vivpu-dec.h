@@ -40,8 +40,6 @@ struct vivpu_av1_run {
 	const struct v4l2_ctrl_av1_frame_header *frame_header;
 	const struct v4l2_ctrl_av1_tile_group *tile_group;
 	const struct v4l2_ctrl_av1_tile_group_entry *tg_entries;
-	const struct v4l2_ctrl_av1_tile_list *tile_list;
-	const struct v4l2_ctrl_av1_tile_list_entry *tl_entries;
 };
 
 struct vivpu_run {
