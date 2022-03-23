@@ -118,6 +118,9 @@ static const struct vivpu_control vivpu_controls[] = {
 	{
 		.cfg.id = V4L2_CID_STATELESS_AV1_LEVEL,
 	},
+	{
+		.cfg.id = V4L2_CID_STATELESS_AV1_FILM_GRAIN,
+	},
 };
 
 #define VIVPU_CONTROLS_COUNT	ARRAY_SIZE(vivpu_controls)

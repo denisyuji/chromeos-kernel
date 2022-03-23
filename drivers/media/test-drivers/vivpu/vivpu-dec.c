@@ -274,10 +274,10 @@ vivpu_dump_av1_global_motion(struct vivpu_ctx *ctx, struct vivpu_run *run)
 static void
 vivpu_dump_av1_film_grain(struct vivpu_ctx *ctx, struct vivpu_run *run)
 {
-	const struct v4l2_av1_film_grain *fg;
+	const struct v4l2_ctrl_av1_film_grain *fg;
 	u32 i;
 
-	fg = &run->av1.frame_header->film_grain;
+	fg = run->av1.film_grain;
 
 	dprintk(ctx->dev, "AV1 Film Grain\n");
 	dprintk(ctx->dev, "flags %d\n", fg->flags);
@@ -415,6 +415,8 @@ void vivpu_device_run(void *priv)
 			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_GROUP);
 		run.av1.tg_entries =
 			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_TILE_GROUP_ENTRY);
+		run.av1.film_grain =
+			vivpu_find_control_data(ctx, V4L2_CID_STATELESS_AV1_FILM_GRAIN);
 
 		vivpu_dump_av1_ctrls(ctx, &run);
 		vivpu_av1_check_reference_frames(ctx, &run);
