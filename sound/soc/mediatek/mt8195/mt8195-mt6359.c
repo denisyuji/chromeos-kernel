@@ -79,9 +79,9 @@ static const struct snd_soc_dapm_widget mt8195_mt6359_widgets[] = {
 
 static const struct snd_soc_dapm_route mt8195_mt6359_routes[] = {
 	/* headset */
-	{ "Headphone", NULL, "HPOL" },
-	{ "Headphone", NULL, "HPOR" },
-	{ "IN1P", NULL, "Headset Mic" },
+	{ "Headphone", NULL, "rt5682 HPOL" },
+	{ "Headphone", NULL, "rt5682 HPOR" },
+	{ "rt5682 IN1P", NULL, "Headset Mic" },
 	/* SOF Uplink */
 	{SOF_DMA_UL4, NULL, "O034"},
 	{SOF_DMA_UL4, NULL, "O035"},
@@ -1287,6 +1287,14 @@ static struct snd_soc_dai_link mt8195_mt6359_dai_links[] = {
 
 static struct snd_soc_codec_conf rt1011_codec_conf[] = {
 	{
+		.dlc = COMP_CODEC_CONF("mt6359-sound"),
+		.name_prefix = "mt6359",
+	},
+	{
+		.dlc = COMP_CODEC_CONF(RT5682_DEV0_NAME),
+		.name_prefix = "rt5682",
+	},
+	{
 		.dlc = COMP_CODEC_CONF(RT1011_DEV0_NAME),
 		.name_prefix = "Left",
 	},
@@ -1296,7 +1304,26 @@ static struct snd_soc_codec_conf rt1011_codec_conf[] = {
 	},
 };
 
+static struct snd_soc_codec_conf rt1019_codec_conf[] = {
+	{
+		.dlc = COMP_CODEC_CONF("mt6359-sound"),
+		.name_prefix = "mt6359",
+	},
+	{
+		.dlc = COMP_CODEC_CONF(RT5682_DEV0_NAME),
+		.name_prefix = "rt5682",
+	},
+};
+
 static struct snd_soc_codec_conf max98390_codec_conf[] = {
+	{
+		.dlc = COMP_CODEC_CONF("mt6359-sound"),
+		.name_prefix = "mt6359",
+	},
+	{
+		.dlc = COMP_CODEC_CONF(RT5682_DEV0_NAME),
+		.name_prefix = "rt5682",
+	},
 	{
 		.dlc = COMP_CODEC_CONF(MAX98390_DEV0_NAME),
 		.name_prefix = "Right",
@@ -1601,6 +1628,8 @@ static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 				dai_link->codecs = rt1019_comps;
 				dai_link->num_codecs = ARRAY_SIZE(rt1019_comps);
 				dai_link->init = mt8195_rt1019_init;
+				card->codec_conf = rt1019_codec_conf;
+				card->num_configs = ARRAY_SIZE(rt1019_codec_conf);
 				break;
 			case MAX98390_SPEAKER_AMP_PRESENT:
 				dai_link->codecs = max98390_comps;
