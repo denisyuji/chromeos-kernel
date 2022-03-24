@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 config VIDEO_VIVPU
 	tristate "Virtual VPU Driver (vivpu)"
-	depends on VIDEO_DEV && VIDEO_V4L2
+	depends on VIDEO_DEV
 	select VIDEOBUF2_VMALLOC
 	select V4L2_MEM2MEM_DEV
 	select MEDIA_CONTROLLER
