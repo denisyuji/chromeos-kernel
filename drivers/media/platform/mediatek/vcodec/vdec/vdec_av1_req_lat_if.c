@@ -40,9 +40,12 @@
 	(((value) < 0) ? -ROUND_POWER_OF_TWO_64(-(value), (n)) \
 		: ROUND_POWER_OF_TWO_64((value), (n)))
 
-#define BIT_FLAG(x,bit) (!!((x)->flags & bit))
-#define INT16_MIN      (-32767-1)
-#define INT16_MAX      (32767)
+#define BIT_FLAG(x, bit)		(!!((x)->flags & bit))
+#define SEGMENTATION_FLAG(x, name)	(!!((x)->flags & V4L2_AV1_SEGMENTATION_FLAG_##name))
+#define QUANT_FLAG(x, name)		(!!((x)->flags & V4L2_AV1_QUANTIZATION_FLAG_##name))
+#define SEQUENCE_FLAG(x, name)		(!!((x)->flags & V4L2_AV1_SEQUENCE_FLAG_##name))
+#define FH_FLAG(x, name)		(!!((x)->flags & V4L2_AV1_FRAME_HEADER_FLAG_##name))
+
 #define MINQ 0
 #define MAXQ 255
 
@@ -52,7 +55,7 @@
 #define WARP_PARAM_REDUCE_BITS 6
 #define WARPEDMODEL_PREC_BITS 16
 
-static const unsigned short div_lut[DIV_LUT_NUM + 1] = {
+static const short div_lut[DIV_LUT_NUM + 1] = {
 	16384, 16320, 16257, 16194, 16132, 16070, 16009, 15948, 15888, 15828, 15768,
 	15709, 15650, 15592, 15534, 15477, 15420, 15364, 15308, 15252, 15197, 15142,
 	15087, 15033, 14980, 14926, 14873, 14821, 14769, 14717, 14665, 14614, 14564,
@@ -93,10 +96,10 @@ static const unsigned short div_lut[DIV_LUT_NUM + 1] = {
 struct vdec_av1_slice_init_vsi {
 	u32 architecture;
 	u32 reserved;
-	uint64_t core_vsi;
-	uint64_t cdf_table_addr;
+	u64 core_vsi;
+	u64 cdf_table_addr;
 	u32 cdf_table_size;
-	uint64_t iq_table_addr;
+	u64 iq_table_addr;
 	u32 iq_table_size;
 	u32 vsi_size;
 };
@@ -111,13 +114,13 @@ struct vdec_av1_slice_init_vsi {
  */
 struct vdec_av1_slice_mem {
 	union {
-		uint64_t buf;
+		u64 buf;
 		dma_addr_t dma_addr;
 	};
 	union {
 		size_t size;
 		dma_addr_t dma_addr_end;
-		uint64_t padding;
+		u64 padding;
 	};
 };
 
@@ -154,9 +157,9 @@ enum vdec_av1_slice_resolution_level {
  */
 enum vdec_av1_slice_frame_type {
 	AV1_KEY_FRAME = 0,
-	AV1_INTER_FRAME = 1,
-	AV1_INTRA_ONLY_FRAME = 2,
-	AV1_SWITCH_FRAME = 3,
+	AV1_INTER_FRAME,
+	AV1_INTRA_ONLY_FRAME,
+	AV1_SWITCH_FRAME,
 	AV1_FRAME_TYPES,
 };
 
@@ -165,9 +168,9 @@ enum vdec_av1_slice_frame_type {
  */
 enum vdec_av1_slice_reference_mode {
 	AV1_SINGLE_REFERENCE = 0,
-	AV1_COMPOUND_REFERENCE = 1,
-	AV1_REFERENCE_MODE_SELECT = 2,
-	AV1_REFERENCE_MODES = 3,
+	AV1_COMPOUND_REFERENCE,
+	AV1_REFERENCE_MODE_SELECT,
+	AV1_REFERENCE_MODES,
 };
 
 /**
@@ -261,7 +264,7 @@ struct vdec_av1_slice_seg {
 	u8 segmentation_temporal_update;
 	u8 segmentation_update_data;
 	int feature_data[V4L2_AV1_MAX_SEGMENTS][V4L2_AV1_SEG_LVL_MAX];
-	unsigned short feature_enabled_mask[V4L2_AV1_MAX_SEGMENTS];
+	u16 feature_enabled_mask[V4L2_AV1_MAX_SEGMENTS];
 	int segid_preskip;
 	int last_active_segid;
 };
@@ -548,7 +551,7 @@ struct vdec_av1_slice_frame {
 	struct vdec_av1_slice_uncompressed_header uh;
 	struct vdec_av1_slice_seq_header seq;
 	u8 large_scale_tile;
-	uint64_t cur_ts;
+	u64 cur_ts;
 	int prev_fb_idx;
 	u8 ref_frame_sign_bias[V4L2_AV1_TOTAL_REFS_PER_FRAME];
 	u32 order_hints[V4L2_AV1_REFS_PER_FRAME];
@@ -598,13 +601,13 @@ struct vdec_av1_slice_frame_info {
 };
 
 /**
- * struct vdec_av1_slice_slot - slot info need save in golbal instance
+ * struct vdec_av1_slice_slot - slot info need save in global instance
  * @frame_info: frame info for each slot
  * @timestamp:  time stamp info
  */
 struct vdec_av1_slice_slot {
        struct vdec_av1_slice_frame_info frame_info[AV1_MAX_FRAME_BUF_COUNT];
-       uint64_t timestamp[AV1_MAX_FRAME_BUF_COUNT];
+       u64 timestamp[AV1_MAX_FRAME_BUF_COUNT];
 };
 
 /**
@@ -618,8 +621,7 @@ struct vdec_av1_slice_fb {
 };
 
 /**
- * struct vdec_av1_slice_vsi - exchange frame information
- * 								 between Main CPU and MicroP
+ * struct vdec_av1_slice_vsi - exchange frame information between Main CPU and MicroP
  * @bs:			input buffer info
  * @work_buffer:	working buffe for hw
  * @cdf_table:		cdf_table buffer
@@ -735,13 +737,7 @@ struct vdec_av1_slice_instance {
 	int seq;
 };
 
-static int vdec_av1_slice_core_decode(
-	struct vdec_lat_buf *lat_buf);
-
-static inline int vdec_av1_slice_clip3(int value, int low, int high)
-{
-  return value < low ? low : (value > high ? high : value);
-}
+static int vdec_av1_slice_core_decode(struct vdec_lat_buf *lat_buf);
 
 static inline int vdec_av1_slice_get_msb(u32 n)
 {
@@ -751,7 +747,7 @@ static inline int vdec_av1_slice_get_msb(u32 n)
 }
 
 static inline bool vdec_av1_slice_need_scale(u32 ref_width, u32 ref_height,
-					 u32 this_width, u32 this_height)
+					     u32 this_width, u32 this_height)
 {
 	return ((this_width << 1) >= ref_width) &&
 		((this_height << 1) >= ref_height) &&
@@ -763,8 +759,8 @@ static void *vdec_av1_get_ctrl_ptr(struct mtk_vcodec_ctx *ctx, int id)
 {
 	struct v4l2_ctrl *ctrl = v4l2_ctrl_find(&ctx->ctrl_hdl, id);
 
-        if (!ctrl)
-                return ERR_PTR(-EINVAL);
+	if (!ctrl)
+		return ERR_PTR(-EINVAL);
 
 	return ctrl->p_cur.p;
 }
@@ -774,7 +770,7 @@ static int vdec_av1_slice_init_cdf_table(struct vdec_av1_slice_instance *instanc
 	u8 *remote_cdf_table;
 	struct mtk_vcodec_ctx *ctx;
 	struct vdec_av1_slice_init_vsi *vsi;
-	int ret = 0;
+	int ret;
 
 	ctx = instance->ctx;
 	vsi = instance->vpu.vsi;
@@ -786,9 +782,9 @@ static int vdec_av1_slice_init_cdf_table(struct vdec_av1_slice_instance *instanc
 
 	remote_cdf_table = mtk_vcodec_fw_map_dm_addr(ctx->dev->fw_handler,
 		(u32)vsi->cdf_table_addr);
-	if (!remote_cdf_table) {
+	if (IS_ERR(remote_cdf_table)) {
 		mtk_vcodec_err(instance, "failed to map cdf table\n");
-		goto err;
+		return PTR_ERR(remote_cdf_table);
 	}
 
 	mtk_vcodec_debug(instance, "map cdf table to 0x%px\n",
@@ -797,14 +793,14 @@ static int vdec_av1_slice_init_cdf_table(struct vdec_av1_slice_instance *instanc
 	if (instance->cdf_table.va)
 		mtk_vcodec_mem_free(ctx, &instance->cdf_table);
 	instance->cdf_table.size = vsi->cdf_table_size;
-	if (mtk_vcodec_mem_alloc(ctx, &instance->cdf_table))
-		goto err;
+
+	ret = mtk_vcodec_mem_alloc(ctx, &instance->cdf_table);
+	if (ret)
+		return ret;
+
 	memcpy_fromio(instance->cdf_table.va, remote_cdf_table, vsi->cdf_table_size);
 
 	return 0;
-err:
-	ret = -ENOMEM;
-	return ret;
 }
 
 static int vdec_av1_slice_init_iq_table(struct vdec_av1_slice_instance *instance)
@@ -812,7 +808,7 @@ static int vdec_av1_slice_init_iq_table(struct vdec_av1_slice_instance *instance
 	u8 *remote_iq_table;
 	struct mtk_vcodec_ctx *ctx;
 	struct vdec_av1_slice_init_vsi *vsi;
-	int ret = 0;
+	int ret;
 
 	ctx = instance->ctx;
 	vsi = instance->vpu.vsi;
@@ -823,34 +819,32 @@ static int vdec_av1_slice_init_iq_table(struct vdec_av1_slice_instance *instance
 	}
 
 	remote_iq_table = mtk_vcodec_fw_map_dm_addr(ctx->dev->fw_handler,
-		(u32)vsi->iq_table_addr);
-	if (!remote_iq_table) {
+						    (u32)vsi->iq_table_addr);
+	if (IS_ERR(remote_iq_table)) {
 		mtk_vcodec_err(instance, "failed to map iq table\n");
-		goto err;
+		return PTR_ERR(remote_iq_table);
 	}
 
-	mtk_vcodec_debug(instance, "map iq table to 0x%px\n",
-		remote_iq_table);
+	mtk_vcodec_debug(instance, "map iq table to 0x%px\n", remote_iq_table);
 
 	if (instance->iq_table.va)
 		mtk_vcodec_mem_free(ctx, &instance->iq_table);
 	instance->iq_table.size = vsi->iq_table_size;
-	if (mtk_vcodec_mem_alloc(ctx, &instance->iq_table))
-		goto err;
+
+	ret = mtk_vcodec_mem_alloc(ctx, &instance->iq_table);
+	if (ret)
+		return ret;
+
 	memcpy_fromio(instance->iq_table.va, remote_iq_table, vsi->iq_table_size);
 
 	return 0;
-err:
-	ret = -ENOMEM;
-	return ret;
 }
 
 static int vdec_av1_slice_get_new_slot(struct vdec_av1_slice_vsi *vsi)
 {
 	struct vdec_av1_slice_slot *slots = &vsi->slots;
-
 	int new_slot_idx = AV1_INVALID_IDX;
-	int i = 0;
+	int i;
 
 	for (i = 0; i < AV1_MAX_FRAME_BUF_COUNT; i ++) {
 		if (slots->frame_info[i].ref_count == 0) {
@@ -859,7 +853,7 @@ static int vdec_av1_slice_get_new_slot(struct vdec_av1_slice_vsi *vsi)
 		}
 	}
 	if (new_slot_idx != AV1_INVALID_IDX) {
-		slots->frame_info[new_slot_idx].ref_count ++;
+		slots->frame_info[new_slot_idx].ref_count++;
 		slots->timestamp[new_slot_idx] = vsi->frame.cur_ts;
 	}
 
@@ -875,20 +869,18 @@ static void vdec_av1_slice_decrease_ref_count(struct vdec_av1_slice_slot *slots,
 {
 	struct vdec_av1_slice_frame_info *frame_info = slots->frame_info;
 
-	if (fb_idx >= 0 && fb_idx < AV1_MAX_FRAME_BUF_COUNT) {
-		frame_info[fb_idx].ref_count--;
-		if (frame_info[fb_idx].ref_count < 0) {
-			frame_info[fb_idx].ref_count = 0;
-			mtk_v4l2_err(
-				"av1_error: %s() fb_idx %d decrease ref_count error\n",
-				__func__, fb_idx);
-		}
-		if (frame_info[fb_idx].ref_count == 0) {
-			vdec_av1_slice_clear_fb(&frame_info[fb_idx]);
-		}
-	} else
-		mtk_v4l2_err(
-			"av1_error: %s() invalid fb_idx %d\n", __func__, fb_idx);
+	if (fb_idx < 0 || fb_idx >= AV1_MAX_FRAME_BUF_COUNT) {
+		mtk_v4l2_err("av1_error: %s() invalid fb_idx %d\n", __func__, fb_idx);
+		return;
+	}
+
+	frame_info[fb_idx].ref_count--;
+	if (frame_info[fb_idx].ref_count < 0) {
+		frame_info[fb_idx].ref_count = 0;
+		mtk_v4l2_err("av1_error: %s() fb_idx %d decrease ref_count error\n",
+			     __func__, fb_idx);
+	}
+	vdec_av1_slice_clear_fb(&frame_info[fb_idx]);
 }
 
 static void vdec_av1_slice_cleanup_slots(struct vdec_av1_slice_slot *slots,
@@ -901,7 +893,7 @@ static void vdec_av1_slice_cleanup_slots(struct vdec_av1_slice_slot *slots,
 		frame->ref_frame_map[ref_id] = AV1_INVALID_IDX;
 
 	for (slot_id = 0; slot_id < AV1_MAX_FRAME_BUF_COUNT; slot_id++) {
-		uint64_t timestamp = slots->timestamp[slot_id];
+		u64 timestamp = slots->timestamp[slot_id];
 		bool ref_used = false;
 
 		/* ignored unused slots */
@@ -921,15 +913,15 @@ static void vdec_av1_slice_cleanup_slots(struct vdec_av1_slice_slot *slots,
 }
 
 static void vdec_av1_slice_setup_slot(struct vdec_av1_slice_instance *instance,
-	                              struct vdec_av1_slice_vsi *vsi,
-	                              struct v4l2_ctrl_av1_frame_header *ctrl_fh)
+				      struct vdec_av1_slice_vsi *vsi,
+				      struct v4l2_ctrl_av1_frame_header *ctrl_fh)
 {
 	struct vdec_av1_slice_frame_info *cur_frame_info;
 	struct vdec_av1_slice_uncompressed_header *uh = &vsi->frame.uh;
-        int ref_id;
+	int ref_id;
 
-        memcpy(&vsi->slots, &instance->slots, sizeof(instance->slots));
-        vdec_av1_slice_cleanup_slots(&vsi->slots, &vsi->frame, ctrl_fh);
+	memcpy(&vsi->slots, &instance->slots, sizeof(instance->slots));
+	vdec_av1_slice_cleanup_slots(&vsi->slots, &vsi->frame, ctrl_fh);
 	vsi->slot_id = vdec_av1_slice_get_new_slot(vsi);
 
 	if (vsi->slot_id == AV1_INVALID_IDX) {
@@ -938,9 +930,8 @@ static void vdec_av1_slice_setup_slot(struct vdec_av1_slice_instance *instance,
 	}
 	cur_frame_info = &vsi->slots.frame_info[vsi->slot_id];
 	cur_frame_info->frame_type = uh->frame_type;
-	cur_frame_info->frame_is_intra =
-		((uh->frame_type == AV1_INTRA_ONLY_FRAME) ||
-		(uh->frame_type == AV1_KEY_FRAME));
+	cur_frame_info->frame_is_intra = ((uh->frame_type == AV1_INTRA_ONLY_FRAME) ||
+					  (uh->frame_type == AV1_KEY_FRAME));
 	cur_frame_info->order_hint = uh->order_hint;
 	cur_frame_info->upscaled_width = uh->upscaled_width;
 	cur_frame_info->pic_pitch = 0;
@@ -951,7 +942,7 @@ static void vdec_av1_slice_setup_slot(struct vdec_av1_slice_instance *instance,
 
 	/* ensure current frame is properly mapped if referenced */
 	for (ref_id = 0; ref_id < V4L2_AV1_TOTAL_REFS_PER_FRAME; ref_id++) {
-		uint64_t timestamp = vsi->slots.timestamp[vsi->slot_id];
+		u64 timestamp = vsi->slots.timestamp[vsi->slot_id];
 
 		if (ctrl_fh->reference_frame_ts[ref_id] == timestamp)
 			vsi->frame.ref_frame_map[ref_id] = vsi->slot_id;
@@ -963,22 +954,14 @@ static int vdec_av1_slice_alloc_working_buffer(struct vdec_av1_slice_instance *i
 	struct mtk_vcodec_ctx *ctx = instance->ctx;
 	struct vdec_av1_slice_work_buffer *work_buffer = vsi->work_buffer;
 	enum vdec_av1_slice_resolution_level level;
-
-	u32 max_sb_w;
-	u32 max_sb_h;
-	u32 max_w;
-	u32 max_h;
-	u32 w;
-	u32 h;
+	u32 max_sb_w, max_sb_h, max_w, max_h, w, h;
 	size_t size;
-	int ret;
-	int i;
+	int i, ret;
 
 	w = vsi->frame.uh.frame_width;
 	h = vsi->frame.uh.frame_height;
 
-	if (w > VCODEC_DEC_4K_CODED_WIDTH ||
-		h > VCODEC_DEC_4K_CODED_HEIGHT) {
+	if (w > VCODEC_DEC_4K_CODED_WIDTH || h > VCODEC_DEC_4K_CODED_HEIGHT) {
 		/* 8K */
 		return -EINVAL;
 	} else if (w > MTK_VDEC_MAX_W || h > MTK_VDEC_MAX_H) {
@@ -1002,7 +985,6 @@ static int vdec_av1_slice_alloc_working_buffer(struct vdec_av1_slice_instance *i
 
 	max_sb_w = DIV_ROUND_UP(max_w, 128);
 	max_sb_h = DIV_ROUND_UP(max_h, 128);
-	ret = -ENOMEM;
 
 	/*
 	 * Lat-flush must wait core idle, otherwise core will
@@ -1014,7 +996,8 @@ static int vdec_av1_slice_alloc_working_buffer(struct vdec_av1_slice_instance *i
 		if (instance->mv[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->mv[i]);
 		instance->mv[i].size = size;
-		if (mtk_vcodec_mem_alloc(ctx, &instance->mv[i]))
+		ret = mtk_vcodec_mem_alloc(ctx, &instance->mv[i]);
+		if (ret)
 			goto err;
 		work_buffer[i].mv_addr.buf = instance->mv[i].dma_addr;
 		work_buffer[i].mv_addr.size = size;
@@ -1025,24 +1008,28 @@ static int vdec_av1_slice_alloc_working_buffer(struct vdec_av1_slice_instance *i
 		if (instance->seg[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->seg[i]);
 		instance->seg[i].size = size;
-		if (mtk_vcodec_mem_alloc(ctx, &instance->seg[i]))
+		ret = mtk_vcodec_mem_alloc(ctx, &instance->seg[i]);
+		if (ret)
 			goto err;
 		work_buffer[i].segid_addr.buf = instance->seg[i].dma_addr;
 		work_buffer[i].segid_addr.size = size;
 	}
+
 	size = 16384;
 	for (i = 0; i < AV1_MAX_FRAME_BUF_COUNT; i++) {
 		if (instance->cdf[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->cdf[i]);
 		instance->cdf[i].size = size;
-		if (mtk_vcodec_mem_alloc(ctx, &instance->cdf[i]))
+		ret = mtk_vcodec_mem_alloc(ctx, &instance->cdf[i]);
+		if (ret)
 			goto err;
 		work_buffer[i].cdf_addr.buf = instance->cdf[i].dma_addr;
 		work_buffer[i].cdf_addr.size = size;
 	}
 	if (!instance->cdf_temp.va) {
-		instance->cdf_temp.size = (1024*16*100);
-		if (mtk_vcodec_mem_alloc(ctx, &instance->cdf_temp))
+		instance->cdf_temp.size = (1024 * 16 * 100);
+		ret = mtk_vcodec_mem_alloc(ctx, &instance->cdf_temp);
+		if (ret)
 			goto err;
 		vsi->cdf_tmp.buf = instance->cdf_temp.dma_addr;
 		vsi->cdf_tmp.size = instance->cdf_temp.size;
@@ -1052,10 +1039,13 @@ static int vdec_av1_slice_alloc_working_buffer(struct vdec_av1_slice_instance *i
 	if (instance->tile.va)
 		mtk_vcodec_mem_free(ctx, &instance->tile);
 	instance->tile.size = size;
-	if (mtk_vcodec_mem_alloc(ctx, &instance->tile))
+
+	ret = mtk_vcodec_mem_alloc(ctx, &instance->tile);
+	if (ret)
 		goto err;
+
 	vsi->tile.buf = instance->tile.dma_addr;
-	vsi->tile.size= size;
+	vsi->tile.size = size;
 
 	instance->level = level;
 	return 0;
@@ -1070,18 +1060,17 @@ static void vdec_av1_slice_free_working_buffer(struct vdec_av1_slice_instance *i
 	struct mtk_vcodec_ctx *ctx = instance->ctx;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(instance->mv); i++) {
+	for (i = 0; i < ARRAY_SIZE(instance->mv); i++)
 		if (instance->mv[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->mv[i]);
-	}
-	for (i = 0; i < ARRAY_SIZE(instance->seg); i++) {
+
+	for (i = 0; i < ARRAY_SIZE(instance->seg); i++)
 		if (instance->seg[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->seg[i]);
-	}
-	for (i = 0; i < ARRAY_SIZE(instance->cdf); i++) {
+
+	for (i = 0; i < ARRAY_SIZE(instance->cdf); i++)
 		if (instance->cdf[i].va)
 			mtk_vcodec_mem_free(ctx, &instance->cdf[i]);
-	}
 
 	if (instance->tile.va)
 		mtk_vcodec_mem_free(ctx, &instance->tile);
@@ -1098,19 +1087,19 @@ static void vdec_av1_slice_free_working_buffer(struct vdec_av1_slice_instance *i
 static void vdec_av1_slice_vsi_from_remote(struct vdec_av1_slice_vsi *vsi,
 					   struct vdec_av1_slice_vsi *remote_vsi)
 {
-        memcpy_fromio(&vsi->trans, &remote_vsi->trans, sizeof(vsi->trans));
+	memcpy_fromio(&vsi->trans, &remote_vsi->trans, sizeof(vsi->trans));
 	memcpy_fromio(&vsi->state, &remote_vsi->state, sizeof(vsi->state));
 }
 
 static void vdec_av1_slice_vsi_to_remote(struct vdec_av1_slice_vsi *vsi,
-                                         struct vdec_av1_slice_vsi *remote_vsi)
+					 struct vdec_av1_slice_vsi *remote_vsi)
 {
 	memcpy_toio(remote_vsi, vsi, sizeof(*vsi));
 }
 
 static int vdec_av1_slice_setup_lat_from_src_buf(struct vdec_av1_slice_instance *instance,
-					         struct vdec_av1_slice_vsi *vsi,
-					         struct vdec_lat_buf *lat_buf)
+						 struct vdec_av1_slice_vsi *vsi,
+						 struct vdec_lat_buf *lat_buf)
 {
 	struct vb2_v4l2_buffer *src;
 	struct vb2_v4l2_buffer *dst;
@@ -1152,34 +1141,36 @@ static void vdec_av1_slice_get_shear_params(struct vdec_av1_slice_gm *gm_params)
 	const int *mat = gm_params->wmmat;
 	short shift;
 	short y;
-	long long v;
+	long long gv, dv;
 
 	if (gm_params->wmmat[2] <= 0)
 		return;
 
-	gm_params->alpha =
-		vdec_av1_slice_clip3(mat[2] - (1 << WARPEDMODEL_PREC_BITS), INT16_MIN, INT16_MAX);
-	gm_params->beta = vdec_av1_slice_clip3(mat[3], INT16_MIN, INT16_MAX);
+	gm_params->alpha = clamp_val(mat[2] - (1 << WARPEDMODEL_PREC_BITS), S16_MIN, S16_MAX);
+	gm_params->beta = clamp_val(mat[3], S16_MIN, S16_MAX);
 
 	y = vdec_av1_slice_resolve_divisor_32(abs(mat[2]), &shift) * (mat[2] < 0 ? -1 : 1);
-	v = ((long long)mat[4] * (1 << WARPEDMODEL_PREC_BITS)) * y;
-	gm_params->gamma = vdec_av1_slice_clip3((int)ROUND_POWER_OF_TWO_SIGNED_64(v, shift),
-		INT16_MIN, INT16_MAX);
-	v = ((long long)mat[3] * mat[4]) * y;
-	gm_params->delta = vdec_av1_slice_clip3(mat[5] - (int)ROUND_POWER_OF_TWO_SIGNED_64(v, shift) -
-        (1 << WARPEDMODEL_PREC_BITS), INT16_MIN, INT16_MAX);
+
+	gv = ((long long)mat[4] * (1 << WARPEDMODEL_PREC_BITS)) * y;
+	gm_params->gamma = clamp_val((int)ROUND_POWER_OF_TWO_SIGNED_64(gv, shift),
+				     S16_MIN, S16_MAX);
+
+	dv = ((long long)mat[3] * mat[4]) * y;
+	gm_params->delta = clamp_val(mat[5] - (int)ROUND_POWER_OF_TWO_SIGNED_64(dv, shift) -
+				     (1 << WARPEDMODEL_PREC_BITS), S16_MIN, S16_MAX);
+
 	gm_params->alpha = ROUND_POWER_OF_TWO_SIGNED(gm_params->alpha, WARP_PARAM_REDUCE_BITS) *
-		(1 << WARP_PARAM_REDUCE_BITS);
+			   (1 << WARP_PARAM_REDUCE_BITS);
 	gm_params->beta = ROUND_POWER_OF_TWO_SIGNED(gm_params->beta, WARP_PARAM_REDUCE_BITS) *
-		(1 << WARP_PARAM_REDUCE_BITS);
+			   (1 << WARP_PARAM_REDUCE_BITS);
 	gm_params->gamma = ROUND_POWER_OF_TWO_SIGNED(gm_params->gamma, WARP_PARAM_REDUCE_BITS) *
-		(1 << WARP_PARAM_REDUCE_BITS);
+			   (1 << WARP_PARAM_REDUCE_BITS);
 	gm_params->delta = ROUND_POWER_OF_TWO_SIGNED(gm_params->delta, WARP_PARAM_REDUCE_BITS) *
-		(1 << WARP_PARAM_REDUCE_BITS);
+			   (1 << WARP_PARAM_REDUCE_BITS);
 }
 
 static void vdec_av1_slice_setup_gm(struct vdec_av1_slice_gm *gm,
-                                    struct v4l2_av1_global_motion *ctrl_gm)
+				    struct v4l2_av1_global_motion *ctrl_gm)
 {
 	u32 i, j;
 	for (i = 0; i < V4L2_AV1_TOTAL_REFS_PER_FRAME; i++) {
@@ -1187,7 +1178,7 @@ static void vdec_av1_slice_setup_gm(struct vdec_av1_slice_gm *gm,
 		for (j = 0; j < 6; j++)
 			gm[i].wmmat[j] = ctrl_gm->params[i][j];
 
-		gm[i].invalid = !!(ctrl_gm->invalid & (1 << i));
+		gm[i].invalid = !!(ctrl_gm->invalid & BIT(i));
 		gm[i].alpha = 0;
 		gm[i].beta = 0;
 		gm[i].gamma = 0;
@@ -1198,20 +1189,15 @@ static void vdec_av1_slice_setup_gm(struct vdec_av1_slice_gm *gm,
 }
 
 static void vdec_av1_slice_setup_seg(struct vdec_av1_slice_seg *seg,
-	                             struct v4l2_av1_segmentation *ctrl_seg)
+				     struct v4l2_av1_segmentation *ctrl_seg)
 {
 	u32 i, j;
 
-	seg->segmentation_enabled =
-		BIT_FLAG(ctrl_seg, V4L2_AV1_SEGMENTATION_FLAG_ENABLED);
-	seg->segmentation_update_map =
-		BIT_FLAG(ctrl_seg, V4L2_AV1_SEGMENTATION_FLAG_UPDATE_MAP);
-	seg->segmentation_temporal_update =
-		BIT_FLAG(ctrl_seg, V4L2_AV1_SEGMENTATION_FLAG_TEMPORAL_UPDATE);
-	seg->segmentation_update_data =
-		BIT_FLAG(ctrl_seg, V4L2_AV1_SEGMENTATION_FLAG_UPDATE_DATA);
-	seg->segid_preskip =
-		BIT_FLAG(ctrl_seg, V4L2_AV1_SEGMENTATION_FLAG_SEG_ID_PRE_SKIP);
+	seg->segmentation_enabled = SEGMENTATION_FLAG(ctrl_seg, ENABLED);
+	seg->segmentation_update_map = SEGMENTATION_FLAG(ctrl_seg, UPDATE_MAP);
+	seg->segmentation_temporal_update = SEGMENTATION_FLAG(ctrl_seg, TEMPORAL_UPDATE);
+	seg->segmentation_update_data = SEGMENTATION_FLAG(ctrl_seg, UPDATE_DATA);
+	seg->segid_preskip = SEGMENTATION_FLAG(ctrl_seg, SEG_ID_PRE_SKIP);
 	seg->last_active_segid = ctrl_seg->last_active_seg_id;
 
 	for (i = 0; i < V4L2_AV1_MAX_SEGMENTS; i++) {
@@ -1222,7 +1208,7 @@ static void vdec_av1_slice_setup_seg(struct vdec_av1_slice_seg *seg,
 }
 
 static void vdec_av1_slice_setup_quant(struct vdec_av1_slice_quantization *quant,
-	                               struct v4l2_av1_quantization *ctrl_quant)
+				       struct v4l2_av1_quantization *ctrl_quant)
 {
 	quant->base_q_idx = ctrl_quant->base_q_idx;
 	quant->delta_qydc = ctrl_quant->delta_q_y_dc;
@@ -1233,30 +1219,28 @@ static void vdec_av1_slice_setup_quant(struct vdec_av1_slice_quantization *quant
 	quant->qm_y = ctrl_quant->qm_y;
 	quant->qm_u = ctrl_quant->qm_u;
 	quant->qm_v = ctrl_quant->qm_v;
-	quant->using_qmatrix =
-		BIT_FLAG(ctrl_quant, V4L2_AV1_QUANTIZATION_FLAG_USING_QMATRIX);
+	quant->using_qmatrix = QUANT_FLAG(ctrl_quant, USING_QMATRIX);
 }
 
-static int vdec_av1_slice_get_qindex(
-	struct vdec_av1_slice_uncompressed_header *uh,
-	int segmentation_id)
+static int vdec_av1_slice_get_qindex(struct vdec_av1_slice_uncompressed_header *uh,
+				     int segmentation_id)
 {
 	struct vdec_av1_slice_seg *seg = &uh->seg;
 	struct vdec_av1_slice_quantization *quant = &uh->quant;
 	int data = 0, qindex = 0;
 
 	if (seg->segmentation_enabled &&
-		(seg->feature_enabled_mask[segmentation_id] & (1 << 0))) {
+	    (seg->feature_enabled_mask[segmentation_id] & BIT(0))) {
 		data = seg->feature_data[segmentation_id][0];
 		qindex = quant->base_q_idx + data;
-		return vdec_av1_slice_clip3(qindex, 0, MAXQ);
+		return clamp_val(qindex, 0, MAXQ);
 	}
 
 	return quant->base_q_idx;
 }
 
 static void vdec_av1_slice_setup_lr(struct vdec_av1_slice_lr *lr,
-	                            struct v4l2_av1_loop_restoration  *ctrl_lr)
+				    struct v4l2_av1_loop_restoration  *ctrl_lr)
 {
 	int i;
 
@@ -1264,13 +1248,12 @@ static void vdec_av1_slice_setup_lr(struct vdec_av1_slice_lr *lr,
 		lr->frame_restoration_type[i] = ctrl_lr->frame_restoration_type[i];
 		lr->loop_restoration_size[i] = ctrl_lr->loop_restoration_size[i];
 	}
-        lr->use_lr = lr->frame_restoration_type[0] ? 1 : 0;
-        lr->use_chroma_lr = lr->frame_restoration_type[1] ? 1 : 0;
+        lr->use_lr = !!lr->frame_restoration_type[0];
+        lr->use_chroma_lr = !!lr->frame_restoration_type[1];
 }
 
-static void vdec_av1_slice_setup_lf (
-	struct vdec_av1_slice_loop_filter *lf,
-	struct v4l2_av1_loop_filter *ctrl_lf)
+static void vdec_av1_slice_setup_lf(struct vdec_av1_slice_loop_filter *lf,
+				    struct v4l2_av1_loop_filter *ctrl_lf)
 {
 	int i;
 
@@ -1278,7 +1261,7 @@ static void vdec_av1_slice_setup_lf (
 		lf->loop_filter_level[i] = ctrl_lf->level[i];
 
 	for (i = 0; i < V4L2_AV1_TOTAL_REFS_PER_FRAME; i++)
-			lf->loop_filter_ref_deltas[i] = ctrl_lf->ref_deltas[i];
+		lf->loop_filter_ref_deltas[i] = ctrl_lf->ref_deltas[i];
 
 	for (i = 0; i < 2; i++)
 		lf->loop_filter_mode_deltas[i] = ctrl_lf->mode_deltas[i];
@@ -1288,8 +1271,8 @@ static void vdec_av1_slice_setup_lf (
 		   BIT_FLAG(ctrl_lf, V4L2_AV1_LOOP_FILTER_FLAG_DELTA_ENABLED);
 }
 
-static void vdec_av1_slice_setup_cdef (struct vdec_av1_slice_cdef *cdef,
-	                               struct v4l2_av1_cdef *ctrl_cdef)
+static void vdec_av1_slice_setup_cdef(struct vdec_av1_slice_cdef *cdef,
+				      struct v4l2_av1_cdef *ctrl_cdef)
 {
 	int i;
 
@@ -1304,9 +1287,9 @@ static void vdec_av1_slice_setup_cdef (struct vdec_av1_slice_cdef *cdef,
 			ctrl_cdef->uv_sec_strength[i] -= 1;
 
 		cdef->cdef_y_strength[i] = ctrl_cdef->y_pri_strength[i] << 2 |
-			ctrl_cdef->y_sec_strength[i];
+					   ctrl_cdef->y_sec_strength[i];
 		cdef->cdef_uv_strength[i] = ctrl_cdef->uv_pri_strength[i] << 2 |
-				ctrl_cdef->uv_sec_strength[i];
+					    ctrl_cdef->uv_sec_strength[i];
 	}
 }
 
@@ -1316,40 +1299,28 @@ static void vdec_av1_slice_setup_seq(struct vdec_av1_slice_seq_header *seq,
 	seq->bitdepth = ctrl_seq->bit_depth;
 	seq->max_frame_width = ctrl_seq->max_frame_width_minus_1 + 1;
 	seq->max_frame_height = ctrl_seq->max_frame_height_minus_1 + 1;
-	seq->enable_superres =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_SUPERRES);
-	seq->enable_filter_intra =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_FILTER_INTRA);
-	seq->enable_intra_edge_filter =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_INTRA_EDGE_FILTER);
-	seq->enable_interintra_compound =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_INTERINTRA_COMPOUND);
-	seq->enable_masked_compound =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_MASKED_COMPOUND);
-	seq->enable_dual_filter =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_DUAL_FILTER);
-	seq->enable_jnt_comp =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_JNT_COMP);
-	seq->mono_chrome =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_MONO_CHROME);
-	seq->enable_order_hint =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_ENABLE_ORDER_HINT);
+	seq->enable_superres = SEQUENCE_FLAG(ctrl_seq, ENABLE_SUPERRES);
+	seq->enable_filter_intra = SEQUENCE_FLAG(ctrl_seq, ENABLE_FILTER_INTRA);
+	seq->enable_intra_edge_filter = SEQUENCE_FLAG(ctrl_seq, ENABLE_INTRA_EDGE_FILTER);
+	seq->enable_interintra_compound = SEQUENCE_FLAG(ctrl_seq, ENABLE_INTERINTRA_COMPOUND);
+	seq->enable_masked_compound = SEQUENCE_FLAG(ctrl_seq, ENABLE_MASKED_COMPOUND);
+	seq->enable_dual_filter = SEQUENCE_FLAG(ctrl_seq, ENABLE_DUAL_FILTER);
+	seq->enable_jnt_comp = SEQUENCE_FLAG(ctrl_seq, ENABLE_JNT_COMP);
+	seq->mono_chrome = SEQUENCE_FLAG(ctrl_seq, MONO_CHROME);
+	seq->enable_order_hint = SEQUENCE_FLAG(ctrl_seq, ENABLE_ORDER_HINT);
 	seq->order_hint_bits = ctrl_seq->order_hint_bits;
-	seq->use_128x128_superblock =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_USE_128X128_SUPERBLOCK);
-	seq->subsampling_x =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_SUBSAMPLING_X);
-	seq->subsampling_y =
-		BIT_FLAG(ctrl_seq, V4L2_AV1_SEQUENCE_FLAG_SUBSAMPLING_Y);
+	seq->use_128x128_superblock = SEQUENCE_FLAG(ctrl_seq, USE_128X128_SUPERBLOCK);
+	seq->subsampling_x = SEQUENCE_FLAG(ctrl_seq, SUBSAMPLING_X);
+	seq->subsampling_y = SEQUENCE_FLAG(ctrl_seq, SUBSAMPLING_Y);
 }
 
 static void vdec_av1_slice_setup_tile(struct vdec_av1_slice_frame *frame,
-	                              struct v4l2_av1_tile_info *ctrl_tile)
+				      struct v4l2_av1_tile_info *ctrl_tile)
 {
 	struct vdec_av1_slice_seq_header *seq = &frame->seq;
 	struct vdec_av1_slice_tile *tile = &frame->uh.tile;
-	int i;
 	u32 mib_size_log2 = seq->use_128x128_superblock ? 5 : 4;
+	int i;
 
 	tile->tile_cols = ctrl_tile->tile_cols;
 	tile->tile_rows = ctrl_tile->tile_rows;
@@ -1359,7 +1330,7 @@ static void vdec_av1_slice_setup_tile(struct vdec_av1_slice_frame *frame,
 
 	for (i = 0; i < tile->tile_cols + 1; i++)
 		tile->mi_col_starts[i] =
-			ALIGN_POWER_OF_TWO(ctrl_tile->mi_col_starts[i],mib_size_log2)
+			ALIGN_POWER_OF_TWO(ctrl_tile->mi_col_starts[i], mib_size_log2)
 				>> mib_size_log2;
 
 	for (i = 0; i < tile->tile_rows + 1; i++)
@@ -1369,14 +1340,13 @@ static void vdec_av1_slice_setup_tile(struct vdec_av1_slice_frame *frame,
 }
 
 static void vdec_av1_slice_setup_uh(struct vdec_av1_slice_instance *instance,
-                                    struct vdec_av1_slice_frame *frame,
-                                    struct v4l2_ctrl_av1_frame_header *ctrl_fh)
+				    struct vdec_av1_slice_frame *frame,
+				    struct v4l2_ctrl_av1_frame_header *ctrl_fh)
 {
-	int i;
 	struct vdec_av1_slice_uncompressed_header *uh = &frame->uh;
+	int i;
 
-	uh->use_ref_frame_mvs =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_USE_REF_FRAME_MVS);
+	uh->use_ref_frame_mvs = FH_FLAG(ctrl_fh, USE_REF_FRAME_MVS);
 	uh->order_hint = ctrl_fh->order_hint;
 	vdec_av1_slice_setup_gm(uh->gm, &ctrl_fh->global_motion);
 	uh->upscaled_width = ctrl_fh->upscaled_width;
@@ -1384,52 +1354,39 @@ static void vdec_av1_slice_setup_uh(struct vdec_av1_slice_instance *instance,
 	uh->frame_height = ctrl_fh->frame_height_minus_1 + 1;
 	uh->mi_cols = ((uh->frame_width + 7) >> 3) << 1;
 	uh->mi_rows = ((uh->frame_height + 7) >> 3) << 1;
-	uh->reduced_tx_set =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_REDUCED_TX_SET);
+	uh->reduced_tx_set = FH_FLAG(ctrl_fh, REDUCED_TX_SET);
 	uh->tx_mode = ctrl_fh->tx_mode;
-	uh->uniform_tile_spacing_flag =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_UNIFORM_TILE_SPACING);
+	uh->uniform_tile_spacing_flag = FH_FLAG(ctrl_fh, UNIFORM_TILE_SPACING);
 	uh->interpolation_filter = ctrl_fh->interpolation_filter;
-	uh->allow_warped_motion =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_ALLOW_WARPED_MOTION);
-	uh->is_motion_mode_switchable =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_IS_MOTION_MODE_SWITCHABLE);
+	uh->allow_warped_motion = FH_FLAG(ctrl_fh, ALLOW_WARPED_MOTION);
+	uh->is_motion_mode_switchable = FH_FLAG(ctrl_fh, IS_MOTION_MODE_SWITCHABLE);
 	uh->frame_type = ctrl_fh->frame_type;
 	uh->frame_is_intra = (uh->frame_type == V4L2_AV1_INTRA_ONLY_FRAME ||
-			     uh->frame_type == V4L2_AV1_KEY_FRAME);
-	if (uh->frame_is_intra)
-		uh->reference_mode = AV1_SINGLE_REFERENCE;
-	else
-		uh->reference_mode =
-			BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_REFERENCE_SELECT) ?
-			AV1_REFERENCE_MODE_SELECT : AV1_SINGLE_REFERENCE;
+			      uh->frame_type == V4L2_AV1_KEY_FRAME);
 
-	uh->allow_high_precision_mv =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_ALLOW_HIGH_PRECISION_MV);
-	uh->allow_intra_bc =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_ALLOW_INTRABC);
-	uh->force_integer_mv =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_FORCE_INTEGER_MV);
-	uh->allow_screen_content_tools =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_ALLOW_SCREEN_CONTENT_TOOLS);
-	uh->error_resilient_mode =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_ERROR_RESILIENT_MODE);
+	if (!uh->frame_is_intra && FH_FLAG(ctrl_fh, REFERENCE_SELECT))
+		uh->reference_mode = AV1_REFERENCE_MODE_SELECT;
+	else
+		uh->reference_mode = AV1_SINGLE_REFERENCE;
+
+	uh->allow_high_precision_mv = FH_FLAG(ctrl_fh, ALLOW_HIGH_PRECISION_MV);
+	uh->allow_intra_bc = FH_FLAG(ctrl_fh, ALLOW_INTRABC);
+	uh->force_integer_mv = FH_FLAG(ctrl_fh, FORCE_INTEGER_MV);
+	uh->allow_screen_content_tools = FH_FLAG(ctrl_fh, ALLOW_SCREEN_CONTENT_TOOLS);
+	uh->error_resilient_mode = FH_FLAG(ctrl_fh, ERROR_RESILIENT_MODE);
 	uh->primary_ref_frame = ctrl_fh->primary_ref_frame;
 	uh->disable_frame_end_update_cdf =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_DISABLE_FRAME_END_UPDATE_CDF);
-	uh->disable_cdf_update =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_DISABLE_CDF_UPDATE);
-	uh->skip_mode.skip_mode_present =
-		BIT_FLAG(ctrl_fh, V4L2_AV1_FRAME_HEADER_FLAG_SKIP_MODE_PRESENT);
+			FH_FLAG(ctrl_fh, DISABLE_FRAME_END_UPDATE_CDF);
+	uh->disable_cdf_update = FH_FLAG(ctrl_fh, DISABLE_CDF_UPDATE);
+	uh->skip_mode.skip_mode_present = FH_FLAG(ctrl_fh, SKIP_MODE_PRESENT);
 	uh->skip_mode.skip_mode_frame[0] =
 		ctrl_fh->skip_mode_frame[0] - V4L2_AV1_REF_LAST_FRAME;
 	uh->skip_mode.skip_mode_frame[1] =
 		ctrl_fh->skip_mode_frame[1] - V4L2_AV1_REF_LAST_FRAME;
-        uh->skip_mode.skip_mode_allowed = ctrl_fh->skip_mode_frame[0] ? 1 : 0;
+	uh->skip_mode.skip_mode_allowed = ctrl_fh->skip_mode_frame[0] ? 1 : 0;
 
 	vdec_av1_slice_setup_seg(&uh->seg, &ctrl_fh->segmentation);
-	uh->delta_q_lf.delta_q_present =
-		BIT_FLAG(&ctrl_fh->quantization, V4L2_AV1_QUANTIZATION_FLAG_DELTA_Q_PRESENT);
+	uh->delta_q_lf.delta_q_present = QUANT_FLAG(&ctrl_fh->quantization, DELTA_Q_PRESENT);
 	uh->delta_q_lf.delta_q_res = 1 << ctrl_fh->quantization.delta_q_res;
 	uh->delta_q_lf.delta_lf_present =
 		BIT_FLAG(&ctrl_fh->loop_filter, V4L2_AV1_LOOP_FILTER_FLAG_DELTA_LF_PRESENT);
@@ -1457,16 +1414,16 @@ static void vdec_av1_slice_setup_uh(struct vdec_av1_slice_instance *instance,
 }
 
 static int vdec_av1_slice_setup_tile_group(struct vdec_av1_slice_instance *instance,
-	                                   struct vdec_av1_slice_vsi *vsi)
+					   struct vdec_av1_slice_vsi *vsi)
 {
 	struct v4l2_ctrl_av1_tile_group *ctrl_tg;
 	struct v4l2_ctrl_av1_tile_group_entry *ctrl_tge;
 	struct vdec_av1_slice_tile_group *tile_group = &instance->tile_group;
-	struct vdec_av1_slice_uncompressed_header *uh= &vsi->frame.uh;
+	struct vdec_av1_slice_uncompressed_header *uh = &vsi->frame.uh;
 	struct vdec_av1_slice_tile *tile = &uh->tile;
+	struct v4l2_ctrl *ctrl;
 	u32 tg_size, tge_size;
 	int i;
-	struct v4l2_ctrl *ctrl;
 
 	ctrl = v4l2_ctrl_find(&instance->ctx->ctrl_hdl,
 		V4L2_CID_STATELESS_AV1_TILE_GROUP);
@@ -1507,7 +1464,7 @@ static int vdec_av1_slice_setup_tile_group(struct vdec_av1_slice_instance *insta
 
 	for (i = 0; i < tge_size; i++) {
 		if (i != ctrl_tge[i].tile_row * vsi->frame.uh.tile.tile_cols +
-			ctrl_tge[i].tile_col) {
+		    ctrl_tge[i].tile_col) {
 			mtk_vcodec_err(instance, "Invalid tge info %d, %d %d %d\n",
 				       i, ctrl_tge[i].tile_row, ctrl_tge[i].tile_col,
 				       vsi->frame.uh.tile.tile_rows);
@@ -1525,19 +1482,18 @@ static void vdec_av1_slice_setup_state(struct vdec_av1_slice_vsi *vsi)
 	memset(&vsi->state, 0, sizeof(vsi->state));
 }
 
-
 static void vdec_av1_slice_setup_scale_factors(struct vdec_av1_slice_frame_refs *frame_ref,
-                                               struct vdec_av1_slice_frame_info *ref_frame_info,
-                                               struct vdec_av1_slice_uncompressed_header *uh)
+					       struct vdec_av1_slice_frame_info *ref_frame_info,
+					       struct vdec_av1_slice_uncompressed_header *uh)
 {
+	struct vdec_av1_slice_scale_factors *scale_factors = &frame_ref->scale_factors;
 	u32 ref_upscaled_width = ref_frame_info->upscaled_width;
 	u32 ref_frame_height = ref_frame_info->frame_height;
 	u32 frame_width = uh->frame_width;
 	u32 frame_height = uh->frame_height;
-	struct vdec_av1_slice_scale_factors *scale_factors = &frame_ref->scale_factors;
 
-	if (!vdec_av1_slice_need_scale(
-		ref_upscaled_width, ref_frame_height, frame_width, frame_height)) {
+	if (!vdec_av1_slice_need_scale(ref_upscaled_width, ref_frame_height,
+				       frame_width, frame_height)) {
 		scale_factors->x_scale = -1;
 		scale_factors->y_scale = -1;
 		scale_factors->is_scaled = 0;
@@ -1554,7 +1510,7 @@ static void vdec_av1_slice_setup_scale_factors(struct vdec_av1_slice_frame_refs 
 		(scale_factors->x_scale != AV1_REF_INVALID_SCALE) &&
 		(scale_factors->y_scale != AV1_REF_INVALID_SCALE) &&
 		(scale_factors->x_scale != AV1_REF_NO_SCALE ||
-		scale_factors->y_scale != AV1_REF_NO_SCALE);
+		 scale_factors->y_scale != AV1_REF_NO_SCALE);
 	scale_factors->x_step =
 		ROUND_POWER_OF_TWO(scale_factors->x_scale,
 		AV1_REF_SCALE_SHIFT - AV1_SCALE_SUBPEL_BITS);
@@ -1570,14 +1526,14 @@ static int vdec_av1_slice_get_relative_dist(int a, int b, u8 enable_order_hint, 
 
 	if (!enable_order_hint)
 		return 0;
-	diff = a -b;
+	diff = a - b;
 	m = 1 << (order_hint_bits - 1);
 	diff = (diff & (m - 1)) - (diff & m);
 	return diff;
 }
 
 static void vdec_av1_slice_setup_ref(struct vdec_av1_slice_pfc *pfc,
-	                             struct v4l2_ctrl_av1_frame_header *ctrl_fh)
+				     struct v4l2_ctrl_av1_frame_header *ctrl_fh)
 {
 	struct vdec_av1_slice_vsi *vsi = &pfc->vsi;
 	struct vdec_av1_slice_frame *frame = &vsi->frame;
@@ -1597,20 +1553,20 @@ static void vdec_av1_slice_setup_ref(struct vdec_av1_slice_pfc *pfc,
 
 		slot_id = frame->ref_frame_map[ref_idx];
 		if (slot_id == AV1_INVALID_IDX) {
-                        mtk_v4l2_err("cannot match reference[%d] 0x%llx\n",
-                                     i, ctrl_fh->reference_frame_ts[ref_idx]);
-                        frame->order_hints[i] = 0;
-                        frame->ref_frame_valid[i] = 0;
-                        continue;
+			mtk_v4l2_err("cannot match reference[%d] 0x%llx\n", i,
+				     ctrl_fh->reference_frame_ts[ref_idx]);
+			frame->order_hints[i] = 0;
+			frame->ref_frame_valid[i] = 0;
+			continue;
 		}
 
 		frame->frame_refs[i].ref_fb_idx = slot_id;
 		vdec_av1_slice_setup_scale_factors(&frame->frame_refs[i],
-		                &slots->frame_info[slot_id], uh);
+						   &slots->frame_info[slot_id], uh);
 		if (!seq->enable_order_hint)
 			frame->ref_frame_sign_bias[i + 1] = 0;
 		else
-	                frame->ref_frame_sign_bias[i + 1] =
+			frame->ref_frame_sign_bias[i + 1] =
 				vdec_av1_slice_get_relative_dist(
 				slots->frame_info[slot_id].order_hint, uh->order_hint,
 				seq->enable_order_hint, seq->order_hint_bits) <= 0 ?
@@ -1632,31 +1588,31 @@ static void vdec_av1_slice_get_previous(struct vdec_av1_slice_vsi *vsi)
 }
 
 static void vdec_av1_slice_setup_operating_mode(struct vdec_av1_slice_instance *instance,
-	                                       struct vdec_av1_slice_frame *frame)
+						struct vdec_av1_slice_frame *frame)
 {
 	frame->large_scale_tile = 0;
 }
 
 static int vdec_av1_slice_setup_pfc(struct vdec_av1_slice_instance *instance,
-	                            struct vdec_av1_slice_pfc *pfc)
+				    struct vdec_av1_slice_pfc *pfc)
 {
 	struct v4l2_ctrl_av1_frame_header *ctrl_fh;
 	struct v4l2_ctrl_av1_sequence *ctrl_seq;
-	struct vdec_av1_slice_vsi *vsi;
-        int ret = 0;
+	struct vdec_av1_slice_vsi *vsi = &pfc->vsi;
+	int ret = 0;
 
 	/* frame header */
-	ctrl_fh = (struct v4l2_ctrl_av1_frame_header *)vdec_av1_get_ctrl_ptr(instance->ctx,
-		                                        V4L2_CID_STATELESS_AV1_FRAME_HEADER);
-        if (IS_ERR(ctrl_fh))
-                return PTR_ERR(ctrl_fh);
+	ctrl_fh = (struct v4l2_ctrl_av1_frame_header *)
+		  vdec_av1_get_ctrl_ptr(instance->ctx,
+					V4L2_CID_STATELESS_AV1_FRAME_HEADER);
+	if (IS_ERR(ctrl_fh))
+		return PTR_ERR(ctrl_fh);
 
-        ctrl_seq = (struct v4l2_ctrl_av1_sequence *)vdec_av1_get_ctrl_ptr(instance->ctx,
-                                                        V4L2_CID_STATELESS_AV1_SEQUENCE);
-        if (IS_ERR(ctrl_seq))
-                return PTR_ERR(ctrl_seq);
-
-	vsi = &pfc->vsi;
+	ctrl_seq = (struct v4l2_ctrl_av1_sequence *)
+		   vdec_av1_get_ctrl_ptr(instance->ctx,
+					V4L2_CID_STATELESS_AV1_SEQUENCE);
+	if (IS_ERR(ctrl_seq))
+		return PTR_ERR(ctrl_seq);
 
 	/* setup vsi information */
 	vdec_av1_slice_setup_seq(&vsi->frame.seq, ctrl_seq);
@@ -1675,9 +1631,9 @@ static int vdec_av1_slice_setup_pfc(struct vdec_av1_slice_instance *instance,
 }
 
 static void vdec_av1_slice_setup_lat_buffer(struct vdec_av1_slice_instance *instance,
-                                            struct vdec_av1_slice_vsi *vsi,
-                                            struct mtk_vcodec_mem *bs,
-                                            struct vdec_lat_buf *lat_buf)
+					    struct vdec_av1_slice_vsi *vsi,
+					    struct mtk_vcodec_mem *bs,
+					    struct vdec_lat_buf *lat_buf)
 {
 	struct vdec_av1_slice_work_buffer *work_buffer;
 	int i;
@@ -1713,9 +1669,9 @@ static void vdec_av1_slice_setup_lat_buffer(struct vdec_av1_slice_instance *inst
 	vsi->cdf_tmp.size = instance->cdf_temp.size;
 
 	vsi->tile.buf = instance->tile.dma_addr;
-	vsi->tile.size= instance->tile.size;
+	vsi->tile.size = instance->tile.size;
 	memcpy_fromio(lat_buf->tile_addr.va, instance->tile.va,
-		64 * instance->tile_group.num_tiles);
+		      64 * instance->tile_group.num_tiles);
 
 	vsi->cdf_table.buf = instance->cdf_table.dma_addr;
 	vsi->cdf_table.size = instance->cdf_table.size;
@@ -1726,15 +1682,13 @@ static void vdec_av1_slice_setup_lat_buffer(struct vdec_av1_slice_instance *inst
 
 
 static void vdec_av1_slice_setup_seg_buffer(struct vdec_av1_slice_instance *instance,
-	                                    struct vdec_av1_slice_vsi *vsi)
+					    struct vdec_av1_slice_vsi *vsi)
 {
-	struct vdec_av1_slice_uncompressed_header *uh;
+	struct vdec_av1_slice_uncompressed_header *uh = &vsi->frame.uh;
 	struct mtk_vcodec_mem *buf;
 
 	/* reset segment buffer */
-	uh = &vsi->frame.uh;
-	if ((uh->primary_ref_frame == 7) ||
-		!uh->seg.segmentation_enabled) {
+	if ((uh->primary_ref_frame == 7) || !uh->seg.segmentation_enabled) {
 		mtk_vcodec_debug(instance, "reset seg %d\n", vsi->slot_id);
 		if (vsi->slot_id != AV1_INVALID_IDX) {
 			buf = &instance->seg[vsi->slot_id];
@@ -1744,23 +1698,22 @@ static void vdec_av1_slice_setup_seg_buffer(struct vdec_av1_slice_instance *inst
 }
 
 static void vdec_av1_slice_setup_tile_buffer(struct vdec_av1_slice_instance *instance,
-                                             struct vdec_av1_slice_vsi * vsi,
-                                             struct mtk_vcodec_mem *bs)
+					     struct vdec_av1_slice_vsi * vsi,
+					     struct mtk_vcodec_mem *bs)
 {
 	struct vdec_av1_slice_tile_group *tile_group = &instance->tile_group;
 	struct vdec_av1_slice_uncompressed_header *uh= &vsi->frame.uh;
 	struct vdec_av1_slice_tile *tile = &uh->tile;
-	int tile_row, tile_col;
-	int tile_num = 0;
+	int tile_num, tile_row, tile_col;
 	u32 allow_update_cdf = 0;
 	u32 sb_boundary_x_m1 = 0, sb_boundary_y_m1 = 0;
-	int tile_info_base = 0;
-	u32 tile_buf_pa = 0;
+	int tile_info_base;
+	u32 tile_buf_pa;
 	u32 *tile_info_buf = (u32 *)instance->tile.va;
 	u32 pa = (u32)bs->dma_addr;
 
 	if (uh->disable_cdf_update == 0)
-			allow_update_cdf = 1;
+		allow_update_cdf = 1;
 
 	for (tile_num = 0; tile_num < tile_group->num_tiles; tile_num++) {
 		// each uint32 takes place of 4 bytes
@@ -1786,74 +1739,69 @@ static void vdec_av1_slice_setup_tile_buffer(struct vdec_av1_slice_instance *ins
 			(tile_group->last_tile_in_tile_group[tile_num] << 16));
 
 		if ((tile_num == tile->context_update_tile_id) &&
-			(uh->disable_frame_end_update_cdf == 0))
+		    (uh->disable_frame_end_update_cdf == 0))
 			tile_info_buf[tile_info_base + 4] |= (1 << 17);
 
 		mtk_vcodec_debug(instance, "// tile buf %d pos(%dx%d) offset 0x%x\n",
-			tile_num, tile_row, tile_col, tile_info_base);
+				 tile_num, tile_row, tile_col, tile_info_base);
 		mtk_vcodec_debug(instance, "// %08x %08x %08x %08x\n",
-			tile_info_buf[tile_info_base + 0],
-			tile_info_buf[tile_info_base + 1],
-			tile_info_buf[tile_info_base + 2],
-			tile_info_buf[tile_info_base + 3]);
+				 tile_info_buf[tile_info_base + 0],
+				 tile_info_buf[tile_info_base + 1],
+				 tile_info_buf[tile_info_base + 2],
+				 tile_info_buf[tile_info_base + 3]);
 		mtk_vcodec_debug(instance, "// %08x %08x %08x %08x\n",
-			tile_info_buf[tile_info_base + 4],
-			tile_info_buf[tile_info_base + 5],
-			tile_info_buf[tile_info_base + 6],
-			tile_info_buf[tile_info_base + 7]);
+				 tile_info_buf[tile_info_base + 4],
+				 tile_info_buf[tile_info_base + 5],
+				 tile_info_buf[tile_info_base + 6],
+				 tile_info_buf[tile_info_base + 7]);
 	}
 }
 
 static int vdec_av1_slice_setup_lat(struct vdec_av1_slice_instance *instance,
-	                            struct mtk_vcodec_mem *bs,
-                                    struct vdec_lat_buf *lat_buf,
-                                    struct vdec_av1_slice_pfc *pfc)
+				    struct mtk_vcodec_mem *bs,
+				    struct vdec_lat_buf *lat_buf,
+				    struct vdec_av1_slice_pfc *pfc)
 {
 	struct vdec_av1_slice_vsi *vsi = &pfc->vsi;
 	int ret;
 
 	ret = vdec_av1_slice_setup_lat_from_src_buf(instance, vsi, lat_buf);
 	if (ret)
-		goto err;
+		return ret;
 
 	ret = vdec_av1_slice_setup_pfc(instance, pfc);
 	if (ret)
-		goto err;
+		return ret;
 
 	ret = vdec_av1_slice_setup_tile_group(instance, vsi);
-        if (ret)
-                goto err;
+	if (ret)
+		return ret;
 
 	ret = vdec_av1_slice_alloc_working_buffer(instance, vsi);
 	if (ret)
-		goto err;
+		return ret;
 
 	vdec_av1_slice_setup_seg_buffer(instance, vsi);
 	vdec_av1_slice_setup_tile_buffer(instance, vsi, bs);
 	vdec_av1_slice_setup_lat_buffer(instance, vsi, bs, lat_buf);
 
 	return 0;
-
-err:
-	return ret;
 }
 
 static int vdec_av1_slice_update_lat(struct vdec_av1_slice_instance *instance,
-                                     struct vdec_lat_buf *lat_buf,
-                                     struct vdec_av1_slice_pfc *pfc)
+				     struct vdec_lat_buf *lat_buf,
+				     struct vdec_av1_slice_pfc *pfc)
 {
 	struct vdec_av1_slice_vsi *vsi;
 
 	vsi = &pfc->vsi;
-	mtk_vcodec_debug(instance,
-		"Frame %u LAT CRC 0x%08x, output size is %d\n",
-		pfc->seq, vsi->state.crc[0],vsi->state.out_size);
+	mtk_vcodec_debug(instance, "Frame %u LAT CRC 0x%08x, output size is %d\n",
+			 pfc->seq, vsi->state.crc[0], vsi->state.out_size);
 
 	/* buffer full, need to re-decode */
 	if (vsi->state.full) {
 		/* buffer not enough */
-		if (vsi->trans.dma_addr_end - vsi->trans.dma_addr ==
-			vsi->ube.size)
+		if (vsi->trans.dma_addr_end - vsi->trans.dma_addr == vsi->ube.size)
 			return -ENOMEM;
 		return -EAGAIN;
 	}
@@ -1866,10 +1814,9 @@ static int vdec_av1_slice_update_lat(struct vdec_av1_slice_instance *instance,
 }
 
 static int vdec_av1_slice_setup_core_to_dst_buf(struct vdec_av1_slice_instance *instance,
-	                                        struct vdec_lat_buf *lat_buf)
+						struct vdec_lat_buf *lat_buf)
 {
-	struct vb2_v4l2_buffer *src;
-	struct vb2_v4l2_buffer *dst;
+	struct vb2_v4l2_buffer *src, *dst;
 
 	dst = v4l2_m2m_next_dst_buf(instance->ctx->m2m_ctx);
 	if (!dst)
@@ -1886,18 +1833,14 @@ static int vdec_av1_slice_setup_core_to_dst_buf(struct vdec_av1_slice_instance *
 }
 
 static int vdec_av1_slice_setup_core_buffer(struct vdec_av1_slice_instance *instance,
-                                            struct vdec_av1_slice_pfc *pfc,
-                                            struct vdec_av1_slice_vsi *vsi,
-                                            struct vdec_fb *fb,
-                                            struct vdec_lat_buf *lat_buf)
+					    struct vdec_av1_slice_pfc *pfc,
+					    struct vdec_av1_slice_vsi *vsi,
+					    struct vdec_fb *fb,
+					    struct vdec_lat_buf *lat_buf)
 {
 	struct vb2_buffer *vb;
 	struct vb2_queue *vq;
-	int plane;
-	int size;
-	int idx;
-	int w;
-	int h;
+	int w, h, plane, size;
 	int i;
 
 	plane = instance->ctx->q_data[MTK_Q_DATA_DST].fmt->num_planes;
@@ -1913,8 +1856,7 @@ static int vdec_av1_slice_setup_core_buffer(struct vdec_av1_slice_instance *inst
 		vsi->fb.c.dma_addr = fb->base_c.dma_addr;
 
 	/* reference buffers */
-	vq = v4l2_m2m_get_vq(instance->ctx->m2m_ctx,
-		V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+	vq = v4l2_m2m_get_vq(instance->ctx->m2m_ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	if (!vq)
 		return -EINVAL;
 
@@ -1923,26 +1865,23 @@ static int vdec_av1_slice_setup_core_buffer(struct vdec_av1_slice_instance *inst
 	if (!vb)
 		return -EINVAL;
 
-	/*
-	 * get buffer address from vb2buf
-	 */
+	/* get buffer address from vb2buf */
 	for (i = 0; i < V4L2_AV1_REFS_PER_FRAME; i++) {
-		idx = vb2_find_timestamp(vq, pfc->ref_idx[i], 0);
-		if (idx < 0) {
-			memset(&vsi->ref[i], 0, sizeof(vsi->ref[i]));
-		} else {
-			vb = vq->bufs[idx];
-			vsi->ref[i].y.dma_addr =
-				vb2_dma_contig_plane_dma_addr(vb, 0);
-			if (plane == 1)
-				vsi->ref[i].c.dma_addr =
-					vsi->ref[i].y.dma_addr + size;
-			else
-				vsi->ref[i].c.dma_addr =
-					vb2_dma_contig_plane_dma_addr(vb, 1);
-		}
-	}
+		struct vdec_av1_slice_fb *vref = &vsi->ref[i];
+		int idx = vb2_find_timestamp(vq, pfc->ref_idx[i], 0);
 
+		if (idx < 0) {
+			memset(vref, 0, sizeof(*vref));
+			continue;
+		}
+
+		vb = vq->bufs[idx];
+		vref->y.dma_addr = vb2_dma_contig_plane_dma_addr(vb, 0);
+		if (plane == 1)
+			vref->c.dma_addr = vref->y.dma_addr + size;
+		else
+			vref->c.dma_addr = vb2_dma_contig_plane_dma_addr(vb, 1);
+	}
 	vsi->tile.dma_addr = lat_buf->tile_addr.dma_addr;
 	vsi->tile.size = lat_buf->tile_addr.size;
 
@@ -1950,43 +1889,38 @@ static int vdec_av1_slice_setup_core_buffer(struct vdec_av1_slice_instance *inst
 }
 
 static int vdec_av1_slice_setup_core(struct vdec_av1_slice_instance *instance,
-                                     struct vdec_fb *fb,
-                                     struct vdec_lat_buf *lat_buf,
-                                     struct vdec_av1_slice_pfc *pfc)
+				     struct vdec_fb *fb,
+				     struct vdec_lat_buf *lat_buf,
+				     struct vdec_av1_slice_pfc *pfc)
 {
 	struct vdec_av1_slice_vsi *vsi = &pfc->vsi;
 	int ret;
 
 	ret = vdec_av1_slice_setup_core_to_dst_buf(instance, lat_buf);
 	if (ret)
-		goto err;
+		return ret;
 
-	ret = vdec_av1_slice_setup_core_buffer(instance, pfc, vsi,
-		fb, lat_buf);
+	ret = vdec_av1_slice_setup_core_buffer(instance, pfc, vsi, fb, lat_buf);
 	if (ret)
-		goto err;
+		return ret;
 
 	return 0;
-
-err:
-	return ret;
 }
 
 static int vdec_av1_slice_update_core(struct vdec_av1_slice_instance *instance,
-                                      struct vdec_lat_buf *lat_buf,
-                                      struct vdec_av1_slice_pfc *pfc)
+				      struct vdec_lat_buf *lat_buf,
+				      struct vdec_av1_slice_pfc *pfc)
 {
-	struct vdec_av1_slice_vsi *vsi;
+	struct vdec_av1_slice_vsi *vsi = instance->core_vsi;
 
-	vsi = instance->core_vsi;
+	/* TODO: Do something here, or remove this function entirely */
+
 	mtk_vcodec_debug(instance, "Frame %u Y_CRC %08x %08x %08x %08x\n",
-		pfc->seq,
-		vsi->state.crc[0], vsi->state.crc[1],
-		vsi->state.crc[2], vsi->state.crc[3]);
+			 pfc->seq, vsi->state.crc[0], vsi->state.crc[1],
+			 vsi->state.crc[2], vsi->state.crc[3]);
 	mtk_vcodec_debug(instance, "Frame %u C_CRC %08x %08x %08x %08x\n",
-		pfc->seq,
-		vsi->state.crc[8], vsi->state.crc[9],
-		vsi->state.crc[10], vsi->state.crc[11]);
+			 pfc->seq, vsi->state.crc[8], vsi->state.crc[9],
+			 vsi->state.crc[10], vsi->state.crc[11]);
 
 	return 0;
 }
@@ -2032,8 +1966,8 @@ static int vdec_av1_slice_init(struct mtk_vcodec_ctx *ctx)
 	}
 
 	if (vsi->vsi_size != sizeof(struct vdec_av1_slice_vsi))
-		mtk_vcodec_err(instance, "kernel vsi size 0x%x is not equal out 0x%x\n",
-			vsi->vsi_size, sizeof(struct vdec_av1_slice_vsi));
+		mtk_vcodec_err(instance, "remote vsi size 0x%x mismatch! expected: 0x%lx\n",
+			       vsi->vsi_size, sizeof(struct vdec_av1_slice_vsi));
 
 	instance->irq = 1;
 	instance->inneracing_mode = IS_VDEC_INNER_RACING(instance->ctx->dev->dec_capability);
@@ -2073,7 +2007,7 @@ static void vdec_av1_slice_deinit(void *h_vdec)
 }
 
 static int vdec_av1_slice_flush(void *h_vdec, struct mtk_vcodec_mem *bs,
-	                        struct vdec_fb *fb, bool *res_chg)
+				struct vdec_fb *fb, bool *res_chg)
 {
 	struct vdec_av1_slice_instance *instance = h_vdec;
 	int i;
@@ -2081,7 +2015,7 @@ static int vdec_av1_slice_flush(void *h_vdec, struct mtk_vcodec_mem *bs,
 	mtk_vcodec_debug(instance, "flush ...\n");
 
 	for (i = 0; i < AV1_MAX_FRAME_BUF_COUNT; i++)
-			vdec_av1_slice_clear_fb(&instance->slots.frame_info[i]);
+		vdec_av1_slice_clear_fb(&instance->slots.frame_info[i]);
 
 	vdec_msg_queue_wait_lat_buf_full(&instance->ctx->msg_queue);
 	return vpu_dec_reset(&instance->vpu);
@@ -2113,7 +2047,7 @@ static void vdec_av1_slice_get_dpb_size(struct vdec_av1_slice_instance *instance
 }
 
 static void vdec_av1_slice_get_crop_info(struct vdec_av1_slice_instance *instance,
-	                                 struct v4l2_rect *cr)
+	   				 struct v4l2_rect *cr)
 {
 	struct mtk_vcodec_ctx *ctx = instance->ctx;
 
@@ -2150,7 +2084,7 @@ static int vdec_av1_slice_get_param(void *h_vdec, enum vdec_get_param_type type,
 }
 
 static int vdec_av1_slice_lat_decode(void *h_vdec, struct mtk_vcodec_mem *bs,
-                                     struct vdec_fb *fb, bool *res_chg)
+				     struct vdec_fb *fb, bool *res_chg)
 {
 	struct vdec_av1_slice_instance *instance = h_vdec;
 	struct vdec_lat_buf *lat_buf;
@@ -2231,7 +2165,7 @@ static int vdec_av1_slice_lat_decode(void *h_vdec, struct mtk_vcodec_mem *bs,
 		return -EBUSY;
 	}
 	vsi->trans.dma_addr_end += ctx->msg_queue.wdma_addr.dma_addr;
-	mtk_vcodec_debug(instance, "lat dma 1 0x%lx 0x%lx\n",
+	mtk_vcodec_debug(instance, "lat dma 1 0x%llx 0x%llx\n",
 			 pfc->vsi.trans.dma_addr, pfc->vsi.trans.dma_addr_end);
 
 	vdec_msg_queue_update_ube_wptr(&ctx->msg_queue,
