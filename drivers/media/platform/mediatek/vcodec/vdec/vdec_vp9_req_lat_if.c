@@ -7,6 +7,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <media/videobuf2-dma-contig.h>
+#include <media/v4l2-vp9.h>
 
 #include "../mtk_vcodec_util.h"
 #include "../mtk_vcodec_dec.h"
@@ -28,6 +29,7 @@
 #define HDR_FLAG(x) (!!((hdr)->flags & V4L2_VP9_FRAME_FLAG_##x))
 #define LF_FLAG(x) (!!((lf)->flags & V4L2_VP9_LOOP_FILTER_FLAG_##x))
 #define SEG_FLAG(x) (!!((seg)->flags & V4L2_VP9_SEGMENTATION_FLAG_##x))
+#define VP9_BAND_6(band) ((band) == 0 ? 3 : 6)
 
 /*
  * struct vdec_vp9_slice_frame_ctx - vp9 prob tables footprint
@@ -132,6 +134,36 @@ struct vdec_vp9_slice_frame_counts {
 	} mvcomp[2];
 
 	u32 reserved[126][4];
+};
+
+/**
+ * struct vdec_vp9_slice_counts_map - vp9 counts tables to map
+ *                                    v4l2_vp9_frame_symbol_counts
+ * @skip:	skip counts.
+ * @y_mode:	Y prediction mode counts.
+ * @filter:	interpolation filter counts.
+ * @mv_joint:	motion vector joint counts.
+ * @sign:	motion vector sign counts.
+ * @classes:	motion vector class counts.
+ * @class0:	motion vector class0 bit counts.
+ * @bits:	motion vector bits counts.
+ * @class0_fp:	motion vector class0 fractional bit counts.
+ * @fp:	motion vector fractional bit counts.
+ * @class0_hp:	motion vector class0 high precision fractional bit counts.
+ * @hp:	motion vector high precision fractional bit counts.
+ */
+struct vdec_vp9_slice_counts_map {
+	u32 skip[3][2];
+	u32 y_mode[4][10];
+	u32 filter[4][3];
+	u32 sign[2][2];
+	u32 classes[2][11];
+	u32 class0[2][2];
+	u32 bits[2][10][2];
+	u32 class0_fp[2][2][4];
+	u32 fp[2][4];
+	u32 class0_hp[2][2];
+	u32 hp[2][2];
 };
 
 /*
@@ -383,26 +415,30 @@ struct vdec_vp9_slice_ref {
 
 /**
  * struct vdec_vp9_slice_instance - represent one vp9 instance
- * @ctx         : pointer to codec's context
- * @vpu         : VPU instance
- * @seq         : global picture sequence
- * @level       : level of current resolution
- * @width       : width of last picture
- * @height      : height of last picture
- * @frame_type  : frame_type of last picture
- * @irq         : irq to Main CPU or MicroP
- * @show_frame  : show_frame of last picture
- * @dpb         : picture information (width/height) for reference
- * @mv          : mv working buffer
- * @seg         : segmentation working buffer
- * @tile        : tile buffer
- * @prob        : prob table buffer, used to set/update prob table
- * @counts      : counts table buffer, used to update prob table
- * @frame_ctx   : 4 frame context according to VP9 Spec
- * @dirty       : state of each frame context
- * @init_vsi    : vsi used for initialized VP9 instance
- * @vsi         : vsi used for decoding/flush ...
- * @core_vsi    : vsi used for Core stage
+ *
+ * @ctx:		pointer to codec's context
+ * @vpu:		VPU instance
+ * @seq:		global picture sequence
+ * @level:		level of current resolution
+ * @width:		width of last picture
+ * @height:		height of last picture
+ * @frame_type:	frame_type of last picture
+ * @irq:		irq to Main CPU or MicroP
+ * @show_frame:	show_frame of last picture
+ * @dpb:		picture information (width/height) for reference
+ * @mv:		mv working buffer
+ * @seg:		segmentation working buffer
+ * @tile:		tile buffer
+ * @prob:		prob table buffer, used to set/update prob table
+ * @counts:		counts table buffer, used to update prob table
+ * @frame_ctx:		4 frame context according to VP9 Spec
+ * @frame_ctx_helper:	4 frame context according to newest kernel spec
+ * @dirty:		state of each frame context
+ * @init_vsi:		vsi used for initialized VP9 instance
+ * @vsi:		vsi used for decoding/flush ...
+ * @core_vsi:		vsi used for Core stage
+ * @counts_map:	used map to counts_helper
+ * &counts_helper:	counts table according to newest kernel spec
  */
 struct vdec_vp9_slice_instance {
 	struct mtk_vcodec_ctx *ctx;
@@ -438,6 +474,8 @@ struct vdec_vp9_slice_instance {
 
 	/* 4 prob tables */
 	struct vdec_vp9_slice_frame_ctx frame_ctx[4];
+	/*4 helper tables */
+	struct v4l2_vp9_frame_context frame_ctx_helper;
 	unsigned char dirty[4];
 
 	/* MicroP vsi */
@@ -446,50 +484,9 @@ struct vdec_vp9_slice_instance {
 		struct vdec_vp9_slice_vsi *vsi;
 	};
 	struct vdec_vp9_slice_vsi *core_vsi;
-};
 
-/*
- * (2, (0, (1, 3)))
- * max level = 2
- */
-static const signed char vdec_vp9_slice_inter_mode_tree[6] = {
-	-2, 2, 0, 4, -1, -3
-};
-
-/* max level = 6 */
-static const signed char vdec_vp9_slice_intra_mode_tree[18] = {
-	0, 2, -9, 4, -1, 6, 8, 12, -2, 10, -4, -5, -3, 14, -8, 16, -6, -7
-};
-
-/* max level = 2 */
-static const signed char vdec_vp9_slice_partition_tree[6] = {
-	0, 2, -1, 4, -2, -3
-};
-
-/* max level = 1 */
-static const signed char vdec_vp9_slice_switchable_interp_tree[4] = {
-	0, 2, -1, -2
-};
-
-/* max level = 2 */
-static const signed char vdec_vp9_slice_mv_joint_tree[6] = {
-	0, 2, -1, 4, -2, -3
-};
-
-/* max level = 6 */
-static const signed char vdec_vp9_slice_mv_class_tree[20] = {
-	0, 2, -1, 4, 6, 8, -2, -3, 10, 12,
-	-4, -5, -6, 14, 16, 18, -7, -8, -9, -10
-};
-
-/* max level = 0 */
-static const signed char vdec_vp9_slice_mv_class0_tree[2] = {
-	0, -1
-};
-
-/* max level = 2 */
-static const signed char vdec_vp9_slice_mv_fp_tree[6] = {
-	0, 2, -1, 4, -2, -3
+	struct vdec_vp9_slice_counts_map counts_map;
+	struct v4l2_vp9_frame_symbol_counts counts_helper;
 };
 
 /*
@@ -1171,322 +1168,398 @@ err:
 	return ret;
 }
 
-/* implement merge prob process defined in 8.4.1 */
-static unsigned char vdec_vp9_slice_merge_prob(unsigned char pre, unsigned int ct0,
-					       unsigned int ct1, unsigned int cs,
-					       unsigned int uf)
+static
+void vdec_vp9_slice_map_counts_eob_coef(unsigned int i, unsigned int j, unsigned int k,
+					struct vdec_vp9_slice_frame_counts *counts,
+					struct v4l2_vp9_frame_symbol_counts *counts_helper)
 {
-	unsigned int den;
-	unsigned int prob;
-	unsigned int count;
-	unsigned int factor;
+	u32 l, m;
 
 	/*
-	 * The variable den representing the total times
-	 * this boolean has been decoded is set equal to ct0 + ct1.
+	 * helper eo -> mtk eo
+	 * helpre e1 -> mtk c3
+	 * helper c0 -> c0
+	 * helper c1 -> c1
+	 * helper c2 -> c2
 	 */
-	den = ct0 + ct1;
-	if (!den)
-		return pre;  /* => count = 0 => factor = 0 */
-	/*
-	 * The variable prob estimating the probability that
-	 * the boolean is decoded as a 0 is set equal to
-	 * (den == 0) ? 128 : Clip3(1, 255, (ct0 * 256 + (den >> 1)) / den).
-	 */
-	prob = ((ct0 << 8) + (den >> 1)) / den;
-	prob = prob < 1 ? 1 : (prob > 255 ? 255 : prob);
-	/* The variable count is set equal to Min(ct0 + ct1, countSat) */
-	count = den < cs ? den : cs;
-	/*
-	 * The variable factor is set equal to
-	 * maxUpdateFactor * count / countSat.
-	 */
-	factor = uf * count / cs;
-	/*
-	 * The return variable outProb is set equal to
-	 * Round2(preProb * (256 - factor) + prob * factor, 8).
-	 */
-	return pre + (((prob - pre) * factor + 128) >> 8);
-}
-
-static inline unsigned char vdec_vp9_slice_adapt_prob(unsigned char pre, unsigned int ct0,
-						      unsigned int ct1)
-{
-	return vdec_vp9_slice_merge_prob(pre, ct0, ct1, 20, 128);
-}
-
-/* implement merge probs process defined in 8.4.2 */
-static unsigned int vdec_vp9_slice_merge_probs(const signed char *tree, int location,
-					       unsigned char *pre_probs, unsigned int *counts,
-					       unsigned char *probs, unsigned int cs,
-					       unsigned int uf)
-{
-	int left = tree[location];
-	int right = tree[location + 1];
-	unsigned int left_count;
-	unsigned int right_count;
-
-	if (left <= 0)
-		left_count = counts[-left];
-	else
-		left_count = vdec_vp9_slice_merge_probs(tree, left, pre_probs, counts,
-							probs, cs, uf);
-
-	if (right <= 0)
-		right_count = counts[-right];
-	else
-		right_count = vdec_vp9_slice_merge_probs(tree, right, pre_probs, counts,
-							 probs, cs, uf);
-
-	/* merge left and right */
-	probs[location >> 1] =
-		vdec_vp9_slice_merge_prob(pre_probs[location >> 1],
-					  left_count, right_count, cs, uf);
-	return left_count + right_count;
-}
-
-static inline void vdec_vp9_slice_adapt_probs(const signed char *tree,
-					      unsigned char *pre_probs,
-					      unsigned int *counts,
-					      unsigned char *probs)
-{
-	vdec_vp9_slice_merge_probs(tree, 0, pre_probs, counts, probs, 20, 128);
-}
-
-/* 8.4 Probability adaptation process */
-static void vdec_vp9_slice_adapt_table(struct vdec_vp9_slice_vsi *vsi,
-				       struct vdec_vp9_slice_frame_ctx *ctx,
-				       struct vdec_vp9_slice_frame_ctx *pre_ctx,
-				       struct vdec_vp9_slice_frame_counts *counts)
-{
-	unsigned char *pp;
-	unsigned char *p;
-	unsigned int *c;
-	unsigned int *e;
-	unsigned int uf;
-	int t, i, j, k, l;
-
-	uf = 128;
-	if (!vsi->frame.uh.frame_type || vsi->frame.uh.intra_only ||
-	    vsi->frame.uh.last_frame_type)
-		uf = 112;
-
-	p = (unsigned char *)&ctx->coef_probs;
-	pp = (unsigned char *)&pre_ctx->coef_probs;
-	c = (unsigned int *)&counts->coef_probs;
-	e = (unsigned int *)&counts->eob_branch;
-
-	/* 8.4.3 Coefficient probability adaption process */
-	for (t = 0; t < 16; t++) {
-		for (((k) = 0); ((k) < 6); ((k)++)) {
-			for (l = 0; l < (k == 0 ? 3 : 6); l++) {
-				p[0] = vdec_vp9_slice_merge_prob(pp[0], c[3], e[0]
-								 - c[3], 24, uf);
-				p[1] = vdec_vp9_slice_merge_prob(pp[1],	c[0], c[1]
-								 + c[2], 24, uf);
-				p[2] = vdec_vp9_slice_merge_prob(pp[2], c[1],
-								 c[2], 24, uf);
-				p += 3;
-				pp += 3;
-				c += 4;
-				e++;
+	for (l = 0; l < 6; l++) {
+		for (m = 0; m < VP9_BAND_6(l); m++) {
+			if (l == 0) {
+				counts_helper->coeff[i][j][k][l][m] =
+					(u32 (*)[3]) & counts->coef_probs[i][j][k].band_0[m];
+				counts_helper->eob[i][j][k][l][m][0] =
+					&counts->eob_branch[i][j][k].band_0[m];
+				counts_helper->eob[i][j][k][l][m][1] =
+					&counts->coef_probs[i][j][k].band_0[m][3];
+				continue;
 			}
-			if (k == 0) {
-				/* 3 * 3 unused values and 2 bytes padding */
-				p += 11;
-				pp += 11;
-				e++;
-			} else {
-				/* extra 2 bytes could make 4 bytes align (3 * 6 + 2) */
-				p += 2;
-				pp += 2;
-				/* 5 * 6=30, extra 2 int */
-				if (k == 5)
-					e += 2;
-			}
+
+			counts_helper->coeff[i][j][k][l][m] =
+				(u32 (*)[3]) & counts->coef_probs[i][j][k].band_1_5[l - 1][m];
+			counts_helper->eob[i][j][k][l][m][0] =
+				&counts->eob_branch[i][j][k].band_1_5[l - 1][m];
+			counts_helper->eob[i][j][k][l][m][1] =
+				&counts->coef_probs[i][j][k].band_1_5[l - 1][m][3];
 		}
 	}
+}
 
-	if (!vsi->frame.uh.frame_type || vsi->frame.uh.intra_only)
-		return;
+static void vdec_vp9_slice_counts_map_helper(struct vdec_vp9_slice_counts_map *counts_map,
+					     struct vdec_vp9_slice_frame_counts *counts,
+					     struct v4l2_vp9_frame_symbol_counts *counts_helper)
+{
+	int i, j, k;
 
-	/* 8.4.4 Non coefficient probability adaption process */
+	counts_helper->partition = &counts->partition;
+	counts_helper->intra_inter = &counts->intra_inter;
+	counts_helper->tx32p = &counts->tx_p32x32;
+	counts_helper->tx16p = &counts->tx_p16x16;
+	counts_helper->tx8p = &counts->tx_p8x8;
+	counts_helper->uv_mode = &counts->uv_mode;
 
-	for (i = 0; i < 4; i++) {
-		ctx->intra_inter_prob[i] =
-			vdec_vp9_slice_adapt_prob(pre_ctx->intra_inter_prob[i],
-						  counts->intra_inter[i][0],
-						  counts->intra_inter[i][1]);
-	}
+	counts_helper->comp = &counts->comp_inter;
+	counts_helper->comp_ref = &counts->comp_ref;
+	counts_helper->single_ref = &counts->single_ref;
+	counts_helper->mv_mode = &counts->inter_mode;
+	counts_helper->mv_joint = &counts->joint;
 
-	for (i = 0; i < 5; i++) {
-		ctx->comp_inter_prob[i] =
-			vdec_vp9_slice_adapt_prob(pre_ctx->comp_inter_prob[i],
-						  counts->comp_inter[i][0],
-						  counts->comp_inter[i][1]);
-	}
+	for (i = 0; i < ARRAY_SIZE(counts_map->skip); i++)
+		memcpy(counts_map->skip[i], counts->skip[i],
+		       sizeof(counts_map->skip[0]));
+	counts_helper->skip = &counts_map->skip;
 
-	for (i = 0; i < 5; i++) {
-		ctx->comp_ref_prob[i] =
-			vdec_vp9_slice_adapt_prob(pre_ctx->comp_ref_prob[i],
-						  counts->comp_ref[i][0],
-						  counts->comp_ref[i][1]);
-	}
+	for (i = 0; i < ARRAY_SIZE(counts_map->y_mode); i++)
+		memcpy(counts_map->y_mode[i], counts->y_mode[i],
+		       sizeof(counts_map->y_mode[0]));
+	counts_helper->y_mode = &counts_map->y_mode;
 
-	for (i = 0; i < 5; i++) {
-		for (j = 0; j < 2; j++) {
-			ctx->single_ref_prob[i][j] =
-				vdec_vp9_slice_adapt_prob(pre_ctx->single_ref_prob[i][j],
-							  counts->single_ref[i][j][0],
-							  counts->single_ref[i][j][1]);
+	for (i = 0; i < ARRAY_SIZE(counts_map->filter); i++)
+		memcpy(counts_map->filter[i], counts->switchable_interp[i],
+		       sizeof(counts_map->filter[0]));
+	counts_helper->filter = &counts_map->filter;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->sign); i++)
+		memcpy(counts_map->sign[i], counts->mvcomp[i].sign,
+		       sizeof(counts_map->sign[0]));
+	counts_helper->sign = &counts_map->sign;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->classes); i++)
+		memcpy(counts_map->classes[i], counts->mvcomp[i].classes,
+		       sizeof(counts_map->classes[0]));
+	counts_helper->classes = &counts_map->classes;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->class0); i++)
+		memcpy(counts_map->class0[i], counts->mvcomp[i].class0,
+		       sizeof(counts_map->class0[0]));
+	counts_helper->class0 = &counts_map->class0;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->bits); i++)
+		for (j = 0; j < ARRAY_SIZE(counts_map->bits[0]); j++)
+			memcpy(counts_map->bits[i][j], counts->mvcomp[i].bits[j],
+			       sizeof(counts_map->bits[0][0]));
+	counts_helper->bits = &counts_map->bits;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->class0_fp); i++)
+		for (j = 0; j < ARRAY_SIZE(counts_map->class0_fp[0]); j++)
+			memcpy(counts_map->class0_fp[i][j], counts->mvcomp[i].class0_fp[j],
+			       sizeof(counts_map->class0_fp[0][0]));
+	counts_helper->class0_fp = &counts_map->class0_fp;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->fp); i++)
+		memcpy(counts_map->fp[i], counts->mvcomp[i].fp,
+		       sizeof(counts_map->fp[0]));
+	counts_helper->fp = &counts_map->fp;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->class0_hp); i++)
+		memcpy(counts_map->class0_hp[i], counts->mvcomp[i].class0_hp,
+		       sizeof(counts_map->class0_hp[0]));
+	counts_helper->class0_hp = &counts_map->class0_hp;
+
+	for (i = 0; i < ARRAY_SIZE(counts_map->hp); i++)
+		memcpy(counts_map->hp[i], counts->mvcomp[i].hp, sizeof(counts_map->hp[0]));
+
+	counts_helper->hp = &counts_map->hp;
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 2; j++)
+			for (k = 0; k < 2; k++)
+				vdec_vp9_slice_map_counts_eob_coef(i, j, k, counts, counts_helper);
+}
+
+static void vdec_vp9_slice_map_to_coef(unsigned int i, unsigned int j, unsigned int k,
+				       struct vdec_vp9_slice_frame_ctx *frame_ctx,
+				       struct v4l2_vp9_frame_context *frame_ctx_helper)
+{
+	u32 l, m;
+
+	for (l = 0; l < ARRAY_SIZE(frame_ctx_helper->coef[0][0][0]); l++) {
+		for (m = 0; m < VP9_BAND_6(l); m++) {
+			memcpy(frame_ctx_helper->coef[i][j][k][l][m],
+			       frame_ctx->coef_probs[i][j][k][l].probs[m],
+			       sizeof(frame_ctx_helper->coef[i][j][k][l][0]));
 		}
 	}
+}
 
-	for (i = 0; i < 7; i++) {
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_inter_mode_tree,
-					   &pre_ctx->inter_mode_probs[i][0],
-					   &counts->inter_mode[i][0],
-					   &ctx->inter_mode_probs[i][0]);
-	}
+static void vdec_vp9_slice_map_from_coef(unsigned int i, unsigned int j, unsigned int k,
+					 struct vdec_vp9_slice_frame_ctx *frame_ctx,
+					 struct v4l2_vp9_frame_context *frame_ctx_helper)
+{
+	u32 l, m;
 
-	for (i = 0; i < 4; i++) {
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_intra_mode_tree,
-					   &pre_ctx->y_mode_prob[i][0],
-					   &counts->y_mode[i][0],
-					   &ctx->y_mode_prob[i][0]);
-	}
-
-	for (i = 0; i < 10; i++) {
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_intra_mode_tree,
-					   &pre_ctx->uv_mode_prob[i][0],
-					   &counts->uv_mode[i][0],
-					   &ctx->uv_mode_prob[i][0]);
-	}
-
-	for (i = 0; i < 16; i++) {
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_partition_tree,
-					   &pre_ctx->partition_prob[i][0],
-					   &counts->partition[i][0],
-					   &ctx->partition_prob[i][0]);
-	}
-
-	if (vsi->frame.uh.interpolation_filter == 4) {
-		for (i = 0; i < 4; i++) {
-			vdec_vp9_slice_adapt_probs(vdec_vp9_slice_switchable_interp_tree,
-						   &pre_ctx->switch_interp_prob[i][0],
-						   &counts->switchable_interp[i][0],
-						   &ctx->switch_interp_prob[i][0]);
+	for (l = 0; l < ARRAY_SIZE(frame_ctx_helper->coef[0][0][0]); l++) {
+		for (m = 0; m < VP9_BAND_6(l); m++) {
+			memcpy(frame_ctx->coef_probs[i][j][k][l].probs[m],
+			       frame_ctx_helper->coef[i][j][k][l][m],
+			       sizeof(frame_ctx_helper->coef[i][j][k][l][0]));
 		}
 	}
+}
 
-	if (vsi->frame.ch.tx_mode == 4) {
-		for (i = 0; i < 2; i++) {
-			ctx->tx_p8x8[i][0] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p8x8[i][0],
-								       counts->tx_p8x8[i][0],
-								       counts->tx_p8x8[i][1]);
-			ctx->tx_p16x16[i][0] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p16x16[i][0],
-									 counts->tx_p16x16[i][0],
-									 counts->tx_p16x16[i][1] +
-									 counts->tx_p16x16[i][2]);
-			ctx->tx_p16x16[i][1] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p16x16[i][1],
-									 counts->tx_p16x16[i][1],
-									 counts->tx_p16x16[i][2]);
-			ctx->tx_p32x32[i][0] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p32x32[i][0],
-									 counts->tx_p32x32[i][0],
-									 counts->tx_p32x32[i][1] +
-									 counts->tx_p32x32[i][2] +
-									 counts->tx_p32x32[i][3]);
-			ctx->tx_p32x32[i][1] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p32x32[i][1],
-									 counts->tx_p32x32[i][1],
-									 counts->tx_p32x32[i][2] +
-									 counts->tx_p32x32[i][3]);
-			ctx->tx_p32x32[i][2] = vdec_vp9_slice_adapt_prob(pre_ctx->tx_p32x32[i][2],
-									 counts->tx_p32x32[i][2],
-									 counts->tx_p32x32[i][3]);
-		}
-	}
+static
+void vdec_vp9_slice_framectx_map_helper(bool frame_is_intra,
+					struct vdec_vp9_slice_frame_ctx *pre_frame_ctx,
+					struct vdec_vp9_slice_frame_ctx *frame_ctx,
+					struct v4l2_vp9_frame_context *frame_ctx_helper)
+{
+	struct v4l2_vp9_frame_mv_context *mv = &frame_ctx_helper->mv;
+	u32 i, j, k;
 
-	for (i = 0; i < 3; i++) {
-		ctx->skip_probs[i] = vdec_vp9_slice_adapt_prob(pre_ctx->skip_probs[i],
-							       counts->skip[i][0],
-							       counts->skip[i][1]);
-	}
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->coef); i++)
+		for (j = 0; j < ARRAY_SIZE(frame_ctx_helper->coef[0]); j++)
+			for (k = 0; k < ARRAY_SIZE(frame_ctx_helper->coef[0][0]); k++)
+				vdec_vp9_slice_map_to_coef(i, j, k, pre_frame_ctx,
+							   frame_ctx_helper);
 
-	vdec_vp9_slice_adapt_probs(vdec_vp9_slice_mv_joint_tree,
-				   &pre_ctx->joint[0],
-				   &counts->joint[0],
-				   &ctx->joint[0]);
+	/*
+	 * use previous prob when frame is not intra or
+	 * we should use the prob updated by the compressed header parse
+	 */
+	if (!frame_is_intra)
+		frame_ctx = pre_frame_ctx;
 
-	for (i = 0; i < 2; i++) {
-		ctx->sign_classes[i].sign = vdec_vp9_slice_adapt_prob(pre_ctx->sign_classes[i].sign,
-								      counts->mvcomp[i].sign[0],
-								      counts->mvcomp[i].sign[1]);
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_mv_class_tree,
-					   &pre_ctx->sign_classes[i].classes[0],
-					   &counts->mvcomp[i].classes[0],
-					   &ctx->sign_classes[i].classes[0]);
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx8); i++)
+		memcpy(frame_ctx_helper->tx8[i], frame_ctx->tx_p8x8[i],
+		       sizeof(frame_ctx_helper->tx8[0]));
 
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_mv_class0_tree,
-					   pre_ctx->class0_bits[i].class0,
-					   counts->mvcomp[i].class0,
-					   ctx->class0_bits[i].class0);
-		for (j = 0; j < 10; j++) {
-			ctx->class0_bits[i].bits[j] =
-				vdec_vp9_slice_adapt_prob(pre_ctx->class0_bits[i].bits[j],
-							  counts->mvcomp[i].bits[j][0],
-							  counts->mvcomp[i].bits[j][1]);
-		}
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx16); i++)
+		memcpy(frame_ctx_helper->tx16[i], frame_ctx->tx_p16x16[i],
+		       sizeof(frame_ctx_helper->tx16[0]));
 
-		for (j = 0; j < 2; ++j) {
-			vdec_vp9_slice_adapt_probs(vdec_vp9_slice_mv_fp_tree,
-						   pre_ctx->class0_fp_hp[i].class0_fp[j],
-						   counts->mvcomp[i].class0_fp[j],
-						   ctx->class0_fp_hp[i].class0_fp[j]);
-		}
-		vdec_vp9_slice_adapt_probs(vdec_vp9_slice_mv_fp_tree,
-					   pre_ctx->class0_fp_hp[i].fp,
-					   counts->mvcomp[i].fp,
-					   ctx->class0_fp_hp[i].fp);
-		if (vsi->frame.uh.allow_high_precision_mv) {
-			ctx->class0_fp_hp[i].class0_hp =
-				vdec_vp9_slice_adapt_prob(pre_ctx->class0_fp_hp[i].class0_hp,
-							  counts->mvcomp[i].class0_hp[0],
-							  counts->mvcomp[i].class0_hp[1]);
-			ctx->class0_fp_hp[i].hp =
-				vdec_vp9_slice_adapt_prob(pre_ctx->class0_fp_hp[i].hp,
-							  counts->mvcomp[i].hp[0],
-							  counts->mvcomp[i].hp[1]);
-		}
-	}
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx32); i++)
+		memcpy(frame_ctx_helper->tx32[i], frame_ctx->tx_p32x32[i],
+		       sizeof(frame_ctx_helper->tx32[0]));
+
+	memcpy(frame_ctx_helper->skip, frame_ctx->skip_probs, sizeof(frame_ctx_helper->skip));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->inter_mode); i++)
+		memcpy(frame_ctx_helper->inter_mode[i], frame_ctx->inter_mode_probs[i],
+		       sizeof(frame_ctx_helper->inter_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->interp_filter); i++)
+		memcpy(frame_ctx_helper->interp_filter[i], frame_ctx->switch_interp_prob[i],
+		       sizeof(frame_ctx_helper->interp_filter[0]));
+
+	memcpy(frame_ctx_helper->is_inter, frame_ctx->intra_inter_prob,
+	       sizeof(frame_ctx_helper->is_inter));
+
+	memcpy(frame_ctx_helper->comp_mode, frame_ctx->comp_inter_prob,
+	       sizeof(frame_ctx_helper->comp_mode));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->single_ref); i++)
+		memcpy(frame_ctx_helper->single_ref[i], frame_ctx->single_ref_prob[i],
+		       sizeof(frame_ctx_helper->single_ref[0]));
+
+	memcpy(frame_ctx_helper->comp_ref, frame_ctx->comp_ref_prob,
+	       sizeof(frame_ctx_helper->comp_ref));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->y_mode); i++)
+		memcpy(frame_ctx_helper->y_mode[i], frame_ctx->y_mode_prob[i],
+		       sizeof(frame_ctx_helper->y_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->uv_mode); i++)
+		memcpy(frame_ctx_helper->uv_mode[i], frame_ctx->uv_mode_prob[i],
+		       sizeof(frame_ctx_helper->uv_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->partition); i++)
+		memcpy(frame_ctx_helper->partition[i], frame_ctx->partition_prob[i],
+		       sizeof(frame_ctx_helper->partition[0]));
+
+	memcpy(mv->joint, frame_ctx->joint, sizeof(mv->joint));
+
+	for (i = 0; i < ARRAY_SIZE(mv->sign); i++)
+		mv->sign[i] = frame_ctx->sign_classes[i].sign;
+
+	for (i = 0; i < ARRAY_SIZE(mv->classes); i++)
+		memcpy(mv->classes[i], frame_ctx->sign_classes[i].classes,
+		       sizeof(mv->classes[i]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_bit); i++)
+		mv->class0_bit[i] = frame_ctx->class0_bits[i].class0[0];
+
+	for (i = 0; i < ARRAY_SIZE(mv->bits); i++)
+		memcpy(mv->bits[i], frame_ctx->class0_bits[i].bits, sizeof(mv->bits[0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_fr); i++)
+		for (j = 0; j < ARRAY_SIZE(mv->class0_fr[0]); j++)
+			memcpy(mv->class0_fr[i][j], frame_ctx->class0_fp_hp[i].class0_fp[j],
+			       sizeof(mv->class0_fr[0][0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->fr); i++)
+		memcpy(mv->fr[i], frame_ctx->class0_fp_hp[i].fp, sizeof(mv->fr[0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_hp); i++)
+		mv->class0_hp[i] = frame_ctx->class0_fp_hp[i].class0_hp;
+
+	for (i = 0; i < ARRAY_SIZE(mv->hp); i++)
+		mv->hp[i] = frame_ctx->class0_fp_hp[i].hp;
+}
+
+static void vdec_vp9_slice_helper_map_framectx(struct v4l2_vp9_frame_context *frame_ctx_helper,
+					       struct vdec_vp9_slice_frame_ctx *frame_ctx)
+{
+	struct v4l2_vp9_frame_mv_context *mv = &frame_ctx_helper->mv;
+	u32 i, j, k;
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx8); i++)
+		memcpy(frame_ctx->tx_p8x8[i], frame_ctx_helper->tx8[i],
+		       sizeof(frame_ctx_helper->tx8[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx16); i++)
+		memcpy(frame_ctx->tx_p16x16[i], frame_ctx_helper->tx16[i],
+		       sizeof(frame_ctx_helper->tx16[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->tx32); i++)
+		memcpy(frame_ctx->tx_p32x32[i], frame_ctx_helper->tx32[i],
+		       sizeof(frame_ctx_helper->tx32[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->coef); i++)
+		for (j = 0; j < ARRAY_SIZE(frame_ctx_helper->coef[0]); j++)
+			for (k = 0; k < ARRAY_SIZE(frame_ctx_helper->coef[0][0]); k++)
+				vdec_vp9_slice_map_from_coef(i, j, k, frame_ctx,
+							     frame_ctx_helper);
+
+	memcpy(frame_ctx->skip_probs, frame_ctx_helper->skip, sizeof(frame_ctx_helper->skip));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->inter_mode); i++)
+		memcpy(frame_ctx->inter_mode_probs[i], frame_ctx_helper->inter_mode[i],
+		       sizeof(frame_ctx_helper->inter_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->interp_filter); i++)
+		memcpy(frame_ctx->switch_interp_prob[i], frame_ctx_helper->interp_filter[i],
+		       sizeof(frame_ctx_helper->interp_filter[0]));
+
+	memcpy(frame_ctx->intra_inter_prob, frame_ctx_helper->is_inter,
+	       sizeof(frame_ctx_helper->is_inter));
+
+	memcpy(frame_ctx->comp_inter_prob, frame_ctx_helper->comp_mode,
+	       sizeof(frame_ctx_helper->comp_mode));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->single_ref); i++)
+		memcpy(frame_ctx->single_ref_prob[i], frame_ctx_helper->single_ref[i],
+		       sizeof(frame_ctx_helper->single_ref[0]));
+
+	memcpy(frame_ctx->comp_ref_prob, frame_ctx_helper->comp_ref,
+	       sizeof(frame_ctx_helper->comp_ref));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->y_mode); i++)
+		memcpy(frame_ctx->y_mode_prob[i], frame_ctx_helper->y_mode[i],
+		       sizeof(frame_ctx_helper->y_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->uv_mode); i++)
+		memcpy(frame_ctx->uv_mode_prob[i], frame_ctx_helper->uv_mode[i],
+		       sizeof(frame_ctx_helper->uv_mode[0]));
+
+	for (i = 0; i < ARRAY_SIZE(frame_ctx_helper->partition); i++)
+		memcpy(frame_ctx->partition_prob[i], frame_ctx_helper->partition[i],
+		       sizeof(frame_ctx_helper->partition[0]));
+
+	memcpy(frame_ctx->joint, mv->joint, sizeof(mv->joint));
+
+	for (i = 0; i < ARRAY_SIZE(mv->sign); i++)
+		frame_ctx->sign_classes[i].sign = mv->sign[i];
+
+	for (i = 0; i < ARRAY_SIZE(mv->classes); i++)
+		memcpy(frame_ctx->sign_classes[i].classes, mv->classes[i],
+		       sizeof(mv->classes[i]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_bit); i++)
+		frame_ctx->class0_bits[i].class0[0] = mv->class0_bit[i];
+
+	for (i = 0; i < ARRAY_SIZE(mv->bits); i++)
+		memcpy(frame_ctx->class0_bits[i].bits, mv->bits[i], sizeof(mv->bits[0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_fr); i++)
+		for (j = 0; j < ARRAY_SIZE(mv->class0_fr[0]); j++)
+			memcpy(frame_ctx->class0_fp_hp[i].class0_fp[j], mv->class0_fr[i][j],
+			       sizeof(mv->class0_fr[0][0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->fr); i++)
+		memcpy(frame_ctx->class0_fp_hp[i].fp, mv->fr[i], sizeof(mv->fr[0]));
+
+	for (i = 0; i < ARRAY_SIZE(mv->class0_hp); i++)
+		frame_ctx->class0_fp_hp[i].class0_hp = mv->class0_hp[i];
+
+	for (i = 0; i < ARRAY_SIZE(mv->hp); i++)
+		frame_ctx->class0_fp_hp[i].hp = mv->hp[i];
 }
 
 static int vdec_vp9_slice_update_prob(struct vdec_vp9_slice_instance *instance,
 				      struct vdec_vp9_slice_vsi *vsi)
 {
 	struct vdec_vp9_slice_frame_ctx *pre_frame_ctx;
+	struct v4l2_vp9_frame_context *pre_frame_ctx_helper;
 	struct vdec_vp9_slice_frame_ctx *frame_ctx;
 	struct vdec_vp9_slice_frame_counts *counts;
+	struct v4l2_vp9_frame_symbol_counts *counts_helper;
 	struct vdec_vp9_slice_uncompressed_header *uh;
+	bool frame_is_intra;
+	bool use_128;
 
 	uh = &vsi->frame.uh;
 	pre_frame_ctx = &instance->frame_ctx[uh->frame_context_idx];
+	pre_frame_ctx_helper = &instance->frame_ctx_helper;
 	frame_ctx = (struct vdec_vp9_slice_frame_ctx *)instance->prob.va;
 	counts = (struct vdec_vp9_slice_frame_counts *)instance->counts.va;
+	counts_helper = &instance->counts_helper;
 
 	if (!uh->refresh_frame_context)
 		return 0;
 
 	if (!uh->frame_parallel_decoding_mode) {
-		/* uh->error_resilient_mode must be 0 */
-		vdec_vp9_slice_adapt_table(vsi,	frame_ctx,
-					   /* use default frame ctx? */
-					   instance->dirty[uh->frame_context_idx] ?
-					   pre_frame_ctx :
-					   vdec_vp9_slice_default_frame_ctx,
-					   counts);
+		vdec_vp9_slice_counts_map_helper(&instance->counts_map, counts, counts_helper);
+
+		frame_is_intra = !vsi->frame.uh.frame_type || vsi->frame.uh.intra_only;
+		/* check default prob */
+		if (!instance->dirty[uh->frame_context_idx])
+			vdec_vp9_slice_framectx_map_helper(frame_is_intra,
+							   vdec_vp9_slice_default_frame_ctx,
+							   frame_ctx,
+							   pre_frame_ctx_helper);
+		else
+			vdec_vp9_slice_framectx_map_helper(frame_is_intra,
+							   pre_frame_ctx,
+							   frame_ctx,
+							   pre_frame_ctx_helper);
+
+		use_128 = !frame_is_intra && !vsi->frame.uh.last_frame_type;
+		v4l2_vp9_adapt_coef_probs(pre_frame_ctx_helper,
+					  counts_helper,
+					  use_128,
+					  frame_is_intra);
+		if (!frame_is_intra)
+			v4l2_vp9_adapt_noncoef_probs(pre_frame_ctx_helper,
+						     counts_helper,
+						     V4L2_VP9_REFERENCE_MODE_SINGLE_REFERENCE,
+						     vsi->frame.uh.interpolation_filter,
+						     vsi->frame.ch.tx_mode,
+						     vsi->frame.uh.allow_high_precision_mv ?
+						     V4L2_VP9_FRAME_FLAG_ALLOW_HIGH_PREC_MV : 0);
+		vdec_vp9_slice_helper_map_framectx(pre_frame_ctx_helper, pre_frame_ctx);
+	} else {
+		memcpy(pre_frame_ctx, frame_ctx, sizeof(*frame_ctx));
 	}
 
-	memcpy(pre_frame_ctx, frame_ctx, sizeof(*frame_ctx));
 	instance->dirty[uh->frame_context_idx] = 1;
 
 	return 0;
