@@ -130,6 +130,21 @@ patternProperties:
               properties:
                 drive-strength: false
 
+          - if:
+              required:
+                - bias-disable
+            then:
+              properties:
+                bias-pull-up: false
+                bias-pull-down: false
+
+          - if:
+              required:
+                - bias-pull-up
+            then:
+              properties:
+                bias-pull-down: false
+
         additionalProperties: false
 
 allOf:
