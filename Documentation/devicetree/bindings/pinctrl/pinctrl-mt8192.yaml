@@ -122,6 +122,14 @@ patternProperties:
         required:
           - pinmux
 
+        allOf:
+          - if:
+              required:
+                - drive-strength-microamp
+            then:
+              properties:
+                drive-strength: false
+
         additionalProperties: false
 
 allOf:
