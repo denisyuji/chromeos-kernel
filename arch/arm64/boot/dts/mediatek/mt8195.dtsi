@@ -1467,6 +1467,15 @@
 			dp_calibration: dp-data@1ac {
 				reg = <0x1ac 0x10>;
 			};
+			lvts_e_data1: lvts-data1@1bc {
+				reg = <0x1bc 0x14>;
+			};
+			lvts_e_data2: lvts-data2@1d0 {
+				reg = <0x1d0 0x38>;
+			};
+			svs_calibration: calib@580 {
+				reg = <0x580 0x64>;
+			};
 		};
 
 		u3phy2: t-phy@11c40000 {
