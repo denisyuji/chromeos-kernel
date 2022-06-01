@@ -800,7 +800,7 @@ static int lvts_register_irq_handler(struct lvts_data *lvts_data)
 static int lvts_register_thermal_zones(struct lvts_data *lvts_data)
 {
 	struct device *dev = lvts_data->dev;
-	struct thermal_zone *tzdev;
+	struct thermal_zone_device *tzdev;
 	struct soc_temp_tz *lvts_tz;
 	int i, ret;
 
