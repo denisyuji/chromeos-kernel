@@ -277,7 +277,6 @@
 
 &gpu {
 	mali-supply = <&mt6315_7_vbuck1>;
-	sram-supply = <&mt6359_vsram_others_ldo_reg>;
 };
 
 &i2c0 {
@@ -446,6 +445,13 @@
 
 &mt6359_vrf12_ldo_reg {
 	regulator-always-on;
+};
+
+&mt6359_vsram_others_ldo_reg {
+	regulator-min-microvolt = <750000>;
+	regulator-max-microvolt = <850000>;
+	regulator-coupled-with = <&mt6315_7_vbuck1>;
+	regulator-coupled-max-spread = <10000>;
 };
 
 &mt6359_vufs_ldo_reg {
@@ -1412,6 +1418,8 @@
 				regulator-max-microvolt = <1193750>;
 				regulator-enable-ramp-delay = <256>;
 				regulator-allowed-modes = <0 1 2>;
+				regulator-coupled-with = <&mt6359_vsram_others_ldo_reg>;
+				regulator-coupled-max-spread = <10000>;
 			};
 		};
 	};
