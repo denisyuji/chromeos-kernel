@@ -645,7 +645,7 @@ static const struct panfrost_compatible amlogic_data = {
 	.vendor_quirk = panfrost_gpu_amlogic_quirk,
 };
 
-static const char * const mediatek_mt8183_supplies[] = { "mali", "sram", NULL };
+static const char * const mediatek_mt8183_supplies[] = { "mali", NULL };
 static const char * const mediatek_mt8183_pm_domains[] = { "core0", "core1", "core2" };
 static const struct panfrost_compatible mediatek_mt8183_data = {
 	.num_supplies = ARRAY_SIZE(mediatek_mt8183_supplies) - 1,
