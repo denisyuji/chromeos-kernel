@@ -1,0 +1,149 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/arm/mediatek/mediatek,fhctl.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek frequency hopping and spread spectrum clocking control
+
+maintainers:
+  - Edward-JW Yang <edward-jw.yang@mediatek.com>
+
+description: |
+  Frequency hopping control (FHCTL) is a piece of hardware that control
+  some PLLs to adopt "hopping" mechanism to adjust their frequency.
+  Spread spectrum clocking (SSC) is another function provided by this hardware.
+
+properties:
+  compatible:
+    const: mediatek,mt8186-fhctl
+
+  reg:
+    maxItems: 2
+
+patternProperties:
+  "^map[0-9]$":
+    type: object
+    description:
+      Represents a group of PLLs controlled by the same domain and method.
+
+    properties:
+      domain:
+        description: The position of this hardware block in the chip.
+        $ref: /schemas/types.yaml#/definitions/string-array
+
+      method:
+        description: Determine which method to control this FHCTL hardware.
+        $ref: /schemas/types.yaml#/definitions/string-array
+
+    patternProperties:
+      "^armpll_(ll|bl)|(cci|main|mm|tvd|m|adsp|mfg|nna|nna2|msdc)pll$":
+        type: object
+        description:
+          A subnode represents one PLL clock. The properties it contains are
+          used to determine whether this PLL enable frequency hopping mechanism           and spread spectrum clocking (SSC) control.
+
+        properties:
+          fh-id:
+            description: The index of the PLL clocks.
+            $ref: /schemas/types.yaml#/definitions/uint32
+
+          perms:
+            description:
+              This is a bit field used to manage the permission of frequency
+              hopping function and spread spectrum clocking control.
+            $ref: /schemas/types.yaml#/definitions/uint32
+
+          ssc-rate:
+            description: The percentage of the spectrum spreading.
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 8
+
+        required:
+          - fh-id
+          - perms
+
+    required:
+      - domain
+      - method
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/mt8186-clk.h>
+    fhctl: fhctl@1000ce00 {
+        compatible = "mediatek,mt8186-fhctl";
+        reg = <0x1000ce00 0x200>,
+              <0x1000c000 0xe00>;
+        map0 {
+            domain = "top";
+            method = "fhctl-ap";
+
+            armpll_ll {
+                fh-id = <0>;
+                perms = <0x10>;
+            };
+
+            armpll_bl {
+                fh-id = <1>;
+                perms = <0x10>;
+            };
+
+            ccipll {
+                fh-id = <2>;
+                perms = <0x10>;
+            };
+
+            mainpll {
+                fh-id = <3>;
+                perms = <0x1c>;
+            };
+
+            mmpll {
+                fh-id = <4>;
+                perms = <0x1c>;
+            };
+
+            tvdpll {
+                fh-id = <5>;
+                perms = <0x1c>;
+            };
+
+            mpll {
+                fh-id = <6>;
+                perms = <0x10>;
+            };
+
+            adsppll {
+                fh-id = <7>;
+                perms = <0x1c>;
+            };
+
+            mfgpll {
+                fh-id = <8>;
+                perms = <0x1c>;
+            };
+
+            nnapll {
+                fh-id = <9>;
+                perms = <0x1c>;
+            };
+
+            nna2pll {
+                fh-id = <10>;
+                perms = <0x1c>;
+            };
+
+            msdcpll {
+                fh-id = <11>;
+                perms = <0x1c>;
+                ssc-rate = <3>;
+            };
+        };
+    };
