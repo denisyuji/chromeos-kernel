@@ -63,7 +63,11 @@ properties:
 
   power-domains:
     minItems: 1
-    maxItems: 3
+    maxItems: 5
+
+  power-domain-names:
+    minItems: 1
+    maxItems: 5
 
   resets:
     minItems: 1
