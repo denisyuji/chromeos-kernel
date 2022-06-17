@@ -35,6 +35,9 @@
 		mdp3_wrot1 = &mdp3_wrot1;
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
+		ovl0 = &ovl0;
+		ovl-2l0 = &ovl0_2l;
+		rdma0 = &rdma0;
 		rdma1 = &rdma1;
 		serial0 = &uart0;
 	};
@@ -43,7 +46,7 @@
 		compatible = "pwm-backlight";
 		pwms = <&pwm0 0 500000>;
 		power-supply = <&ppvar_sys>;
-		enable-gpios = <&pio 152 0>;
+		enable-gpios = <&pio 152 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 1023>;
 		num-interpolated-steps = <1023>;
 		default-brightness-level = <576>;
@@ -349,6 +352,26 @@
 	status = "okay";
 };
 
+&mt6366_vsram_proc11_reg {
+	regulator-min-voltage = <850000>;
+	regulator-max-voltage = <1118750>;
+};
+
+&mt6366_vproc11_reg {
+	regulator-min-voltage = <675000>;
+	regulator-max-voltage = <1118750>;
+};
+
+&mt6366_vsram_proc12_reg {
+	regulator-min-voltage = <850000>;
+	regulator-max-voltage = <1118750>;
+};
+
+&mt6366_vproc12_reg {
+	regulator-min-voltage = <600000>;
+	regulator-max-voltage = <1031250>;
+};
+
 &cci {
 	proc-supply = <&mt6366_vproc12_reg>;
 	sram-supply = <&mt6366_vsram_proc12_reg>;
@@ -395,7 +418,7 @@
 };
 
 &dpi0 {
-	status = "okay";
+	//status = "okay";
 	pinctrl-names = "sleep", "default";
 	pinctrl-0 = <&dpi_pin_default>;
 	pinctrl-1 = <&dpi_pin_func>;
@@ -1468,6 +1491,7 @@
 
 &scp {
 	status = "okay";
+	firmware-name = "mediatek/mt8186/scp.img";
 	memory-region = <&scp_mem_reserved>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&scp_pins>;
@@ -1501,8 +1525,7 @@
 		compatible = "google,cros-ec-spi";
 		reg = <0>;
 		spi-max-frequency = <1000000>;
-		interrupt-parent = <&pio>;
-		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&pio 13 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&ec_ap_int_odl>;
 
@@ -1528,8 +1551,7 @@
 		spi-max-frequency = <1000000>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&gsc_ap_int_odl>;
-		interrupt-parent = <&pio>;
-		interrupts = <15 IRQ_TYPE_EDGE_RISING>;
+		interrupts-extended = <&pio 15 IRQ_TYPE_EDGE_RISING>;
 	};
 };
 

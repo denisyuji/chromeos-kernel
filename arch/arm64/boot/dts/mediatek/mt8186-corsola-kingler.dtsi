@@ -102,20 +102,24 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		port@0 {
-			reg = <0>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
 
-			anx7625_in: endpoint {
-				remote-endpoint = <&dsi_out>;
-				data-lanes = <0 1 2 3>;
+			port@0 {
+				reg = <0>;
+
+				anx7625_in: endpoint {
+					remote-endpoint = <&dsi_out>;
+				};
 			};
-		};
 
-		port@1 {
-			reg = <1>;
+			port@1 {
+				reg = <1>;
 
-			anx7625_out: endpoint {
-				remote-endpoint = <&panel_in>;
+				anx7625_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
 			};
 		};
 
@@ -139,8 +143,7 @@
 	touchscreen@10 {
 		compatible = "hid-over-i2c";
 		reg = <0x10>;
-		interrupt-parent = <&pio>;
-		interrupts = <12 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&touchscreen_pins>;
 		post-power-on-delay-ms = <10>;
@@ -169,8 +172,7 @@
 		reg = <0x58>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&anx7625_dp_pins>;
-		interrupt-parent = <&pio>;
-		interrupts = <8 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&pio 8 IRQ_TYPE_LEVEL_LOW>;
 		enable-gpios = <&pio 176 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&pio 177 GPIO_ACTIVE_HIGH>;
 		vdd10-supply = <&pp1100_dpbrdg>;
@@ -181,6 +183,8 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		#sound-dai-cells = <0>;
+
+		status = "disabled";
 
 		ports {
 			#address-cells = <1>;
@@ -227,8 +231,7 @@
 		pinctrl-0 = <&da7219_pins>;
 		compatible = "dlg,da7219";
 		reg = <0x1a>;
-		interrupt-parent = <&pio>;
-		interrupts = <17 IRQ_TYPE_LEVEL_LOW 17 0>;
+		interrupts-extended = <&pio 17 IRQ_TYPE_LEVEL_LOW>;
 		dlg,micbias-lvl = <2600>;
 		dlg,mic-amp-in-sel = "diff";
 		VDD-supply = <&pp1800_alw>;
