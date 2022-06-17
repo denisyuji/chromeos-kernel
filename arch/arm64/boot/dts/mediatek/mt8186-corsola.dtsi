@@ -412,24 +412,9 @@
 };
 
 &gpu {
-	supply-names = "mali","mali_sram";
+	supply-names = "mali";
 	mali-supply = <&mt6366_vgpu_reg>;
-	mali_sram-supply = <&mt6366_vsram_gpu_reg>;
 	operating-points-v2 = <&gpu_opp_table>;
-	volt-bin-mapping = <3 4 5>;
-
-	power_model@0 {
-		compatible = "arm,mali-simple-power-model";
-		static-coefficient = <2427750>;
-		dynamic-coefficient = <4687>;
-		ts = <20000 2000 (-20) 2>;
-		thermal-zone = "soc_max";
-	};
-
-	power_model@1 {
-		compatible = "arm,mali-g52_r1-power-model";
-		scale = <1>;
-	};
 };
 
 &i2c0 {
@@ -517,7 +502,7 @@
 };
 
 &mmc0 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default", "state_uhs";
 	pinctrl-0 = <&mmc0_pins_default>;
 	pinctrl-1 = <&mmc0_pins_uhs>;
@@ -538,7 +523,7 @@
 };
 
 &mmc1 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default", "state_uhs", "state_eint", "state_dat1";
 	pinctrl-0 = <&mmc1_pins_default>;
 	pinctrl-1 = <&mmc1_pins_uhs>;
@@ -567,9 +552,24 @@
 	regulator-max-microvolt = <3000000>;
 };
 
+&mt6366_vgpu_reg {
+	regulator-min-microvolt = <612500>;
+	regulator-max-microvolt = <1000000>;
+	regulator-coupled-with = <&mt6366_vsram_gpu_reg>;
+	regulator-coupled-max-spread = <100000>;
+};
+
 &mt6366_vmc_reg {
 	/* SDIO IO power fixed to 1.8V */
 	regulator-max-microvolt = <1800000>;
+};
+
+&mt6366_vsram_gpu_reg {
+	regulator-min-microvolt = <850000>;
+	regulator-max-microvolt = <1100000>;
+	regulator-coupled-with = <&mt6366_vgpu_reg>;
+	regulator-coupled-max-spread = <100000>;
+	regulator-always-on; /* TODO: temporary hack */
 };
 
 &mt6366codec {
