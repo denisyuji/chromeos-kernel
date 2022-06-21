@@ -679,12 +679,11 @@ static int of_update_lvts_data(struct lvts_data *lvts_data,
 		}
 
 		/* Get interrupt number */
-		res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
-		if (!res) {
+		domain[i].irq_num = platform_get_irq(pdev, i);
+		if (domain[i].irq_num < 0) {
 			dev_err(dev, "No irq resource, index %d\n", i);
 			return -EINVAL;
 		}
-		domain[i].irq_num = res->start;
 
 		/* Get reset control */
 		domain[i].reset = devm_reset_control_get_by_index(dev, i);
