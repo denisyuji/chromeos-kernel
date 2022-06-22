@@ -1836,7 +1836,7 @@
 					<&spm MT8186_POWER_DOMAIN_MFG3>;
 			power-domain-names = "core0", "core1", "core2";
 			nvmem-cells = <&gpu_volt_bin>;
-			nvmem-cell-names = "volt-bin";
+			nvmem-cell-names = "speed-bin";
 			#cooling-cells = <2>;
 		};
 
