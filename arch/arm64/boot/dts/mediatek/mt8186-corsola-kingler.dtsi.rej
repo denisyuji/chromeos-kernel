@@ -1,0 +1,11 @@
+--- arch/arm64/boot/dts/mediatek/mt8186-corsola-kingler.dtsi
++++ arch/arm64/boot/dts/mediatek/mt8186-corsola-kingler.dtsi
+@@ -136,7 +136,7 @@ anx7625_out: endpoint {
+ 
+ 		aux-bus {
+ 			panel: panel {
+-				compatible = "innolux,n140hca-eac";
++				compatible = "auo,b140han06";
+ 				power-supply = <&pp3300_disp_x>;
+ 				backlight = <&backlight_lcd0>;
+ 
