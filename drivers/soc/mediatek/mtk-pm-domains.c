@@ -595,8 +595,7 @@ static int scpsys_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	const struct scpsys_soc_data *soc;
-	struct device_node *node;
-	struct device *parent;
+	struct device_node *node, *syscon;
 	struct scpsys *scpsys;
 	int ret;
 
@@ -616,13 +615,16 @@ static int scpsys_probe(struct platform_device *pdev)
 	scpsys->pd_data.domains = scpsys->domains;
 	scpsys->pd_data.num_domains = soc->num_domains;
 
-	parent = dev->parent;
-	if (!parent) {
-		dev_err(dev, "no parent for syscon devices\n");
-		return -ENODEV;
+	syscon = of_parse_phandle(dev->of_node, "syscon", 0);
+	if (!syscon) {
+		if (!dev->parent)
+			return -ENODEV;
+		scpsys->base = syscon_node_to_regmap(dev->parent->of_node);
+	} else {
+		scpsys->base = syscon_node_to_regmap(syscon);
+		of_node_put(syscon);
 	}
 
-	scpsys->base = syscon_node_to_regmap(parent->of_node);
 	if (IS_ERR(scpsys->base)) {
 		dev_err(dev, "no regmap available\n");
 		return PTR_ERR(scpsys->base);
