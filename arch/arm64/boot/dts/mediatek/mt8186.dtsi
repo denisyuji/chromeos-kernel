@@ -1821,16 +1821,6 @@
 				     <GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH 0>,
 				     <GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH 0>;
 			interrupt-names = "job", "mmu", "gpu";
-			clocks = <&topckgen CLK_TOP_MFG>,
-				 <&apmixedsys CLK_APMIXED_MFGPLL>,
-				 <&apmixedsys CLK_APMIXED_MFGPLL>,
-				 <&topckgen CLK_TOP_MAINPLL_D5>,
-				 <&mfgsys CLK_MFG_BG3D>;
-			clock-names = "clk_mux",
-				      "clk_pll_src",
-				      "clk_main_parent",
-				      "clk_sub_parent",
-				      "subsys_mfg_cg";
 			power-domains = <&spm MT8186_POWER_DOMAIN_MFG1>,
 					<&spm MT8186_POWER_DOMAIN_MFG2>,
 					<&spm MT8186_POWER_DOMAIN_MFG3>;
