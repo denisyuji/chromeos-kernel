@@ -114,24 +114,14 @@
 	pinctrl-0 = <&dpi_pin_default>;
 	pinctrl-1 = <&dpi_pin_func>;
 	status = "okay";
-
-	ports {
-		port {
-			dpi_out: endpoint {
-				remote-endpoint = <&it6505_in>;
-			};
-		};
-	};
 };
 
-&dsi0 {
-	ports {
-		port {
-			dsi_out: endpoint {
-				remote-endpoint = <&ps8640_in>;
-			};
-		};
-	};
+&dpi_out {
+	remote-endpoint = <&it6505_in>;
+};
+
+&dsi_out {
+	remote-endpoint = <&ps8640_in>;
 };
 
 &i2c0 {
