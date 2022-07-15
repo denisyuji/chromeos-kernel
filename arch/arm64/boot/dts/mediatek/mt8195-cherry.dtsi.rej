@@ -1,0 +1,44 @@
+--- arch/arm64/boot/dts/mediatek/mt8195-cherry.dtsi
++++ arch/arm64/boot/dts/mediatek/mt8195-cherry.dtsi
+@@ -348,14 +348,26 @@ dp_intf1_out: endpoint {
+ &dp_tx {
+ 	status = "okay";
+ 
+-	max-lanes = /bits/ 8 <4>;
+-	max-linkrate = /bits/ 8 <0x1e>;
++	max-linkrate-mhz = <8100>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&dptx_pin>;
+ 
+-	port {
+-		dptx_in: endpoint {
+-			remote-endpoint = <&dp_intf1_out>;
++	ports {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@0 {
++			reg = <0>;
++			dptx_in: endpoint {
++				remote-endpoint = <&dp_intf1_out>;
++			};
++		};
++
++		port@1 {
++			reg = <1>;
++			dptx_out: endpoint {
++				data-lanes = <0 1 2 3>;
++			};
+ 		};
+ 	};
+ };
+@@ -363,8 +375,7 @@ dptx_in: endpoint {
+ &edp_tx {
+ 	status = "okay";
+ 
+-	max-lanes = /bits/ 8 <4>;
+-	max-linkrate = /bits/ 8 <0x1e>;
++	max-linkrate-mhz = <8100>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&edp_pins_default>;
+ 
