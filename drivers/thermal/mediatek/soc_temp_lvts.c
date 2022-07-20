@@ -1195,7 +1195,7 @@ static const struct tc_settings mt8192_tc_settings[] = {
 	}
 };
 
-static const struct lvts_data mt8192_lvts_data = {
+static struct lvts_data mt8192_lvts_data = {
 	.num_domain = MT8192_NUM_DOMAIN,
 	.num_tc = MT8192_NUM_LVTS,
 	.tc = mt8192_tc_settings,
@@ -1374,7 +1374,7 @@ static const struct tc_settings mt8195_tc_settings[] = {
 	}
 };
 
-static const struct lvts_data mt8195_lvts_data = {
+static struct lvts_data mt8195_lvts_data = {
 	.num_domain = MT8195_NUM_DOMAIN,
 	.num_tc = MT8195_NUM_LVTS,
 	.tc = mt8195_tc_settings,
