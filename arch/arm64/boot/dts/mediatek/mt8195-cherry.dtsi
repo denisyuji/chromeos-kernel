@@ -67,6 +67,7 @@
 		gpio = <&pio 55 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&panel_fixed_pins>;
+		regulator-always-on;
 	};
 
 	/* system wide LDO 3.3V power rail */
