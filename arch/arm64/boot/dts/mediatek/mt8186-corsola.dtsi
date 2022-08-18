@@ -418,7 +418,7 @@
 };
 
 &dpi0 {
-	//status = "okay";
+	status = "okay";
 	pinctrl-names = "sleep", "default";
 	pinctrl-0 = <&dpi_pin_default>;
 	pinctrl-1 = <&dpi_pin_func>;
