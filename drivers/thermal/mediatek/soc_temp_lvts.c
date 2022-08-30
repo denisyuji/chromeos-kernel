@@ -133,9 +133,9 @@ static unsigned int lvts_temp_to_raw(struct formula_coeff *co, int temp)
 	return msr_raw;
 }
 
-static int soc_temp_lvts_read_temp(void *data, int *temperature)
+static int soc_temp_lvts_read_temp(struct thermal_zone_device *tz, int *temperature)
 {
-	struct soc_temp_tz *lvts_tz = (struct soc_temp_tz *)data;
+	struct soc_temp_tz *lvts_tz = (struct soc_temp_tz *)tz->devdata;
 	struct lvts_data *lvts_data = lvts_tz->lvts_data;
 	unsigned int msr_raw;
 
@@ -148,7 +148,7 @@ static int soc_temp_lvts_read_temp(void *data, int *temperature)
 	return 0;
 }
 
-static const struct thermal_zone_of_device_ops soc_temp_lvts_ops = {
+static const struct thermal_zone_device_ops soc_temp_lvts_ops = {
 	.get_temp = soc_temp_lvts_read_temp,
 };
 
@@ -813,8 +813,8 @@ static int lvts_register_thermal_zones(struct lvts_data *lvts_data)
 		lvts_tz->id = i;
 		lvts_tz->lvts_data = lvts_data;
 
-		tzdev = devm_thermal_zone_of_sensor_register(dev, lvts_tz->id,
-							     lvts_tz, &soc_temp_lvts_ops);
+		tzdev = devm_thermal_of_zone_register(dev, lvts_tz->id,
+						      lvts_tz, &soc_temp_lvts_ops);
 
 		if (IS_ERR(tzdev)) {
 			if (lvts_tz->id != 0)
