@@ -27,24 +27,13 @@ properties:
     $ref: "/schemas/types.yaml#/definitions/phandle"
     description: The phandle of MT8195 ASoC platform.
 
-  headset-codec:
-    type: object
-    additionalProperties: false
-    properties:
-      sound-dai:
-        maxItems: 1
-    required:
-      - sound-dai
+  mediatek,dptx-codec:
+    $ref: "/schemas/types.yaml#/definitions/phandle"
+    description: The phandle of MT8195 Display Port Tx codec node.
 
-  playback-codecs:
-    type: object
-    additionalProperties: false
-    properties:
-      sound-dai:
-        minItems: 2
-        maxItems: 4
-    required:
-      - sound-dai
+  mediatek,hdmi-codec:
+    $ref: "/schemas/types.yaml#/definitions/phandle"
+    description: The phandle of MT8195 HDMI codec node.
 
   mediatek,adsp:
     $ref: "/schemas/types.yaml#/definitions/phandle"
@@ -61,8 +50,6 @@ additionalProperties: false
 required:
   - compatible
   - mediatek,platform
-  - headset-codec
-  - playback-codecs
 
 examples:
   - |
@@ -72,14 +59,6 @@ examples:
         mediatek,platform = <&afe>;
         pinctrl-names = "default";
         pinctrl-0 = <&aud_pins_default>;
-
-        headset-codec {
-            sound-dai = <&rt5682>;
-        };
-
-        playback-codecs {
-             sound-dai = <&dp_tx>, <&hdmi0>, <&rt1019p>;
-        };
     };
 
 ...
