@@ -534,11 +534,6 @@ out_free_opp_table:
 	dev_pm_opp_of_cpumask_remove_table(&info->cpus);
 
 out_free_resources:
-	if (regulator_is_enabled(info->proc_reg))
-		regulator_disable(info->proc_reg);
-	if (info->sram_reg && regulator_is_enabled(info->sram_reg))
-		regulator_disable(info->sram_reg);
-
 	if (!IS_ERR(info->proc_reg))
 		regulator_put(info->proc_reg);
 	if (!IS_ERR(info->sram_reg))
@@ -553,14 +548,10 @@ out_free_resources:
 
 static void mtk_cpu_dvfs_info_release(struct mtk_cpu_dvfs_info *info)
 {
-	if (!IS_ERR(info->proc_reg)) {
-		regulator_disable(info->proc_reg);
+	if (!IS_ERR(info->proc_reg))
 		regulator_put(info->proc_reg);
-	}
-	if (!IS_ERR(info->sram_reg)) {
-		regulator_disable(info->sram_reg);
+	if (!IS_ERR(info->sram_reg))
 		regulator_put(info->sram_reg);
-	}
 	if (!IS_ERR(info->cpu_clk)) {
 		clk_disable_unprepare(info->cpu_clk);
 		clk_put(info->cpu_clk);
