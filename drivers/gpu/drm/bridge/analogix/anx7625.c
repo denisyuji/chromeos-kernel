@@ -1590,6 +1590,29 @@ static int anx7625_hpd_change_detect(struct anx7625_data *ctx)
 	return 0;
 }
 
+static void
+anx7625_audio_update_connector_status(struct anx7625_data *ctx,
+				      enum drm_connector_status status)
+{
+	if (ctx->plugged_cb && ctx->codec_dev) {
+		ctx->plugged_cb(ctx->codec_dev,
+				status == connector_status_connected);
+	}
+}
+
+static enum drm_connector_status anx7625_sink_detect(struct anx7625_data *ctx)
+{
+	struct device *dev = &ctx->client->dev;
+
+	DRM_DEV_DEBUG_DRIVER(dev, "sink detect\n");
+
+	if (ctx->pdata.panel_bridge)
+		return connector_status_connected;
+
+	return ctx->hpd_status ? connector_status_connected :
+				     connector_status_disconnected;
+}
+
 static void anx7625_work_func(struct work_struct *work)
 {
 	int event;
@@ -1604,6 +1627,8 @@ static void anx7625_work_func(struct work_struct *work)
 	event = anx7625_hpd_change_detect(ctx);
 	if (event < 0)
 		goto unlock;
+
+	anx7625_audio_update_connector_status(ctx, anx7625_sink_detect(ctx));
 
 	if (ctx->bridge_attached)
 		drm_helper_hpd_irq_event(ctx->bridge.dev);
@@ -1792,19 +1817,6 @@ static struct edid *anx7625_get_edid(struct anx7625_data *ctx)
 	return (struct edid *)edid;
 }
 
-static enum drm_connector_status anx7625_sink_detect(struct anx7625_data *ctx)
-{
-	struct device *dev = &ctx->client->dev;
-
-	DRM_DEV_DEBUG_DRIVER(dev, "sink detect\n");
-
-	if (ctx->pdata.panel_bridge)
-		return connector_status_connected;
-
-	return ctx->hpd_status ? connector_status_connected :
-				     connector_status_disconnected;
-}
-
 static int anx7625_audio_hw_params(struct device *dev, void *data,
 				   struct hdmi_codec_daifmt *fmt,
 				   struct hdmi_codec_params *params)
@@ -1951,16 +1963,6 @@ static int anx7625_hdmi_i2s_get_dai_id(struct snd_soc_component *component,
 	 * or external(DPI) bridge
 	 */
 	return 0;
-}
-
-static void
-anx7625_audio_update_connector_status(struct anx7625_data *ctx,
-				      enum drm_connector_status status)
-{
-	if (ctx->plugged_cb && ctx->codec_dev) {
-		ctx->plugged_cb(ctx->codec_dev,
-				status == connector_status_connected);
-	}
 }
 
 static int anx7625_audio_hook_plugged_cb(struct device *dev, void *data,
