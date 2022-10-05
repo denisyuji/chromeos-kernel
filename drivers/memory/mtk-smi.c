@@ -167,12 +167,13 @@ mtk_smi_larb_bind(struct device *dev, struct device *master, void *data)
 	unsigned int         i;
 
 	for (i = 0; i < MTK_LARB_NR_MAX; i++) {
-		if (dev == larb_mmu[i].dev) {
-			larb->larbid = i;
-			larb->mmu = &larb_mmu[i].mmu;
-			larb->bank = larb_mmu[i].bank;
-			return 0;
-		}
+		if (dev != larb_mmu[i].dev)
+			continue;
+
+		larb->larbid = i;
+		larb->mmu = &larb_mmu[i].mmu;
+		larb->bank = larb_mmu[i].bank;
+		return 0;
 	}
 	return -ENODEV;
 }
@@ -194,28 +195,26 @@ static int mtk_smi_larb_config_port_gen1(struct device *dev)
 	const struct mtk_smi_larb_gen *larb_gen = larb->larb_gen;
 	struct mtk_smi *common = dev_get_drvdata(larb->smi_common_dev);
 	int i, m4u_port_id, larb_port_num;
-	u32 sec_con_val, reg_val;
+	u32 reg_val;
 
 	m4u_port_id = larb_gen->port_in_larb[larb->larbid];
 	larb_port_num = larb_gen->port_in_larb[larb->larbid + 1]
 			- larb_gen->port_in_larb[larb->larbid];
 
 	for (i = 0; i < larb_port_num; i++, m4u_port_id++) {
-		if (*larb->mmu & BIT(i)) {
-			/* bit[port + 3] controls the virtual or physical */
-			sec_con_val = SMI_SECUR_CON_VAL_VIRT(m4u_port_id);
-		} else {
-			/* do not need to enable m4u for this port */
+		/* do not need to enable m4u for this port */
+		if (!(*larb->mmu & BIT(i)))
 			continue;
-		}
+
 		reg_val = readl(common->smi_ao_base
 			+ REG_SMI_SECUR_CON_ADDR(m4u_port_id));
 		reg_val &= SMI_SECUR_CON_VAL_MSK(m4u_port_id);
-		reg_val |= sec_con_val;
+
+		/* bit[port + 3] controls the virtual or physical */
+		reg_val |= SMI_SECUR_CON_VAL_VIRT(m4u_port_id);
 		reg_val |= SMI_SECUR_CON_VAL_DOMAIN(m4u_port_id);
-		writel(reg_val,
-			common->smi_ao_base
-			+ REG_SMI_SECUR_CON_ADDR(m4u_port_id));
+		writel(reg_val, common->smi_ao_base
+		       + REG_SMI_SECUR_CON_ADDR(m4u_port_id));
 	}
 	return 0;
 }
@@ -484,25 +483,25 @@ static int mtk_smi_device_link_common(struct device *dev, struct device **com_de
 
 	smi_com_pdev = of_find_device_by_node(smi_com_node);
 	of_node_put(smi_com_node);
-	if (smi_com_pdev) {
-		/* smi common is the supplier, Make sure it is ready before */
-		if (!platform_get_drvdata(smi_com_pdev)) {
-			put_device(&smi_com_pdev->dev);
-			return -EPROBE_DEFER;
-		}
-		smi_com_dev = &smi_com_pdev->dev;
-		link = device_link_add(dev, smi_com_dev,
-				       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
-		if (!link) {
-			dev_err(dev, "Unable to link smi-common dev\n");
-			put_device(&smi_com_pdev->dev);
-			return -ENODEV;
-		}
-		*com_dev = smi_com_dev;
-	} else {
+	if (!smi_com_pdev) {
 		dev_err(dev, "Failed to get the smi_common device\n");
 		return -EINVAL;
 	}
+
+	/* smi common is the supplier, Make sure it is ready before */
+	if (!platform_get_drvdata(smi_com_pdev)) {
+		put_device(&smi_com_pdev->dev);
+		return -EPROBE_DEFER;
+	}
+	smi_com_dev = &smi_com_pdev->dev;
+	link = device_link_add(dev, smi_com_dev,
+			       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
+	if (!link) {
+		dev_err(dev, "Unable to link smi-common dev\n");
+		put_device(&smi_com_pdev->dev);
+		return -ENODEV;
+	}
+	*com_dev = smi_com_dev;
 	return 0;
 }
 
