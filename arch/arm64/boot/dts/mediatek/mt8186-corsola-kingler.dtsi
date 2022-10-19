@@ -172,7 +172,7 @@
 		reg = <0x58>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&anx7625_dp_pins>;
-		interrupts-extended = <&pio 8 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&pio 8 IRQ_TYPE_EDGE_FALLING>;
 		enable-gpios = <&pio 176 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&pio 177 GPIO_ACTIVE_HIGH>;
 		vdd10-supply = <&pp1100_dpbrdg>;
