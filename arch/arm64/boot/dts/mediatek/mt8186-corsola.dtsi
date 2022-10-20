@@ -428,6 +428,20 @@
 	status = "okay";
 };
 
+&fhctl {
+	clocks = <&apmixedsys CLK_APMIXED_ARMPLL_LL>,
+		 <&apmixedsys CLK_APMIXED_ARMPLL_BL>,
+		 <&apmixedsys CLK_APMIXED_CCIPLL>,
+		 <&apmixedsys CLK_APMIXED_MAINPLL>,
+		 <&apmixedsys CLK_APMIXED_MMPLL>,
+		 <&apmixedsys CLK_APMIXED_TVDPLL>,
+		 <&apmixedsys CLK_APMIXED_ADSPPLL>,
+		 <&apmixedsys CLK_APMIXED_MFGPLL>,
+		 <&apmixedsys CLK_APMIXED_NNAPLL>,
+		 <&apmixedsys CLK_APMIXED_NNA2PLL>,
+		 <&apmixedsys CLK_APMIXED_MSDCPLL>;
+};
+
 &pwm0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwm0_gpio_def_cfg>;
