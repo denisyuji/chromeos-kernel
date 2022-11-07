@@ -1,0 +1,15 @@
+--- drivers/soc/mediatek/mtk-mmsys.c
++++ drivers/soc/mediatek/mtk-mmsys.c
+@@ -194,10 +212,10 @@ void mtk_mmsys_ddp_dpi_fmt_config(struct device *dev, u32 val)
+ {
+ 	if (val)
+ 		mtk_mmsys_update_bits(dev_get_drvdata(dev), MT8186_MMSYS_DPI_OUTPUT_FORMAT,
+-				      DPI_RGB888_DDR_CON, DPI_FORMAT_MASK);
++				      DPI_RGB888_DDR_CON, DPI_FORMAT_MASK, NULL);
+ 	else
+ 		mtk_mmsys_update_bits(dev_get_drvdata(dev), MT8186_MMSYS_DPI_OUTPUT_FORMAT,
+-				      DPI_RGB565_SDR_CON, DPI_FORMAT_MASK);
++				      DPI_RGB565_SDR_CON, DPI_FORMAT_MASK, NULL);
+ }
+ EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_dpi_fmt_config);
+ 
