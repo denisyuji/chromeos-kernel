@@ -197,21 +197,19 @@ static int mtk_eint_set_type(struct irq_data *d, unsigned int type)
 		masked = true;
 	}
 
-	if (type & (IRQ_TYPE_LEVEL_LOW | IRQ_TYPE_EDGE_FALLING)) {
+	if (type & (IRQ_TYPE_LEVEL_LOW | IRQ_TYPE_EDGE_FALLING))
 		reg = mtk_eint_get_offset(eint, d->hwirq, eint->regs->pol_clr);
-		writel(mask, reg);
-	} else {
+	else
 		reg = mtk_eint_get_offset(eint, d->hwirq, eint->regs->pol_set);
-		writel(mask, reg);
-	}
 
-	if (type & (IRQ_TYPE_EDGE_RISING | IRQ_TYPE_EDGE_FALLING)) {
+	writel(mask, reg);
+
+	if (type & (IRQ_TYPE_EDGE_RISING | IRQ_TYPE_EDGE_FALLING))
 		reg = mtk_eint_get_offset(eint, d->hwirq, eint->regs->sens_clr);
-		writel(mask, reg);
-	} else {
+	else
 		reg = mtk_eint_get_offset(eint, d->hwirq, eint->regs->sens_set);
-		writel(mask, reg);
-	}
+
+	writel(mask, reg);
 
 	mtk_eint_ack(d);
 	if (!masked)
