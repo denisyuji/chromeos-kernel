@@ -85,6 +85,7 @@
 /* UART S_CMD OP codes */
 #define UART_START_READ		0x1
 #define UART_PARAM		0x1
+#define UART_PARAM_RFR_OPEN	BIT(7)
 
 #define UART_OVERSAMPLING	32
 #define STALE_TIMEOUT		16
@@ -645,7 +646,7 @@ static void qcom_geni_serial_start_rx(struct uart_port *uport)
 	if (status & S_GENI_CMD_ACTIVE)
 		qcom_geni_serial_stop_rx(uport);
 
-	geni_se_setup_s_cmd(&port->se, UART_START_READ, 0);
+	geni_se_setup_s_cmd(&port->se, UART_START_READ, UART_PARAM_RFR_OPEN);
 
 	irq_en = readl(uport->membase + SE_GENI_S_IRQ_EN);
 	irq_en |= S_RX_FIFO_WATERMARK_EN | S_RX_FIFO_LAST_EN;
