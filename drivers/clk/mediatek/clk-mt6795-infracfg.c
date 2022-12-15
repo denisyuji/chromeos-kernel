@@ -101,7 +101,8 @@ static int clk_mt6795_infracfg_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_clk_data;
 
-	ret = mtk_clk_register_gates(node, infra_gates, ARRAY_SIZE(infra_gates), clk_data);
+	ret = mtk_clk_register_gates(node, infra_gates, ARRAY_SIZE(infra_gates),
+				     clk_data, &pdev->dev);
 	if (ret)
 		goto free_clk_data;
 

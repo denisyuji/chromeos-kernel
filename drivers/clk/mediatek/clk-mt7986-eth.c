@@ -85,7 +85,7 @@ static void __init mtk_sgmiisys_0_init(struct device_node *node)
 	clk_data = mtk_alloc_clk_data(ARRAY_SIZE(sgmii0_clks));
 
 	mtk_clk_register_gates(node, sgmii0_clks, ARRAY_SIZE(sgmii0_clks),
-			       clk_data);
+			       clk_data, NULL);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 	if (r)
@@ -103,7 +103,7 @@ static void __init mtk_sgmiisys_1_init(struct device_node *node)
 	clk_data = mtk_alloc_clk_data(ARRAY_SIZE(sgmii1_clks));
 
 	mtk_clk_register_gates(node, sgmii1_clks, ARRAY_SIZE(sgmii1_clks),
-			       clk_data);
+			       clk_data, NULL);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 
@@ -121,7 +121,7 @@ static void __init mtk_ethsys_init(struct device_node *node)
 
 	clk_data = mtk_alloc_clk_data(ARRAY_SIZE(eth_clks));
 
-	mtk_clk_register_gates(node, eth_clks, ARRAY_SIZE(eth_clks), clk_data);
+	mtk_clk_register_gates(node, eth_clks, ARRAY_SIZE(eth_clks), clk_data, NULL);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 

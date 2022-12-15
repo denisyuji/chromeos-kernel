@@ -125,7 +125,7 @@ static int clk_mt8173_mm_probe(struct platform_device *pdev)
 	data = &mt8173_mmsys_driver_data;
 
 	ret = mtk_clk_register_gates(node, data->gates_clk, data->gates_num,
-				     clk_data);
+				     clk_data, &pdev->dev);
 	if (ret)
 		return ret;
 
