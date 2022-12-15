@@ -738,7 +738,7 @@ static int clk_mt8186_topck_probe(struct platform_device *pdev)
 		goto unregister_fixed_clks;
 
 	r = mtk_clk_register_muxes(top_mtk_muxes, ARRAY_SIZE(top_mtk_muxes), node,
-				   &mt8186_clk_lock, clk_data);
+				   &mt8186_clk_lock, clk_data, &pdev->dev);
 	if (r)
 		goto unregister_factors;
 

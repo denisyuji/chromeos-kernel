@@ -1167,7 +1167,7 @@ static int clk_mt8183_top_probe(struct platform_device *pdev)
 	mtk_clk_register_factors(top_divs, ARRAY_SIZE(top_divs), top_clk_data);
 
 	mtk_clk_register_muxes(top_muxes, ARRAY_SIZE(top_muxes),
-		node, &mt8183_clk_lock, top_clk_data);
+		node, &mt8183_clk_lock, top_clk_data, &pdev->dev);
 
 	mtk_clk_register_composites(top_aud_muxes, ARRAY_SIZE(top_aud_muxes),
 		base, &mt8183_clk_lock, top_clk_data, &pdev->dev);

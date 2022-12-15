@@ -1113,7 +1113,7 @@ static int clk_mt8192_top_probe(struct platform_device *pdev)
 		goto unregister_early_factors;
 
 	r = mtk_clk_register_muxes(top_mtk_muxes, ARRAY_SIZE(top_mtk_muxes), node,
-				   &mt8192_clk_lock, top_clk_data);
+				   &mt8192_clk_lock, top_clk_data, &pdev->dev);
 	if (r)
 		goto unregister_factors;
 

@@ -191,7 +191,7 @@ static int clk_mt7986_infracfg_probe(struct platform_device *pdev)
 
 	mtk_clk_register_factors(infra_divs, ARRAY_SIZE(infra_divs), clk_data);
 	mtk_clk_register_muxes(infra_muxes, ARRAY_SIZE(infra_muxes), node,
-			       &mt7986_clk_lock, clk_data);
+			       &mt7986_clk_lock, clk_data, &pdev->dev);
 	mtk_clk_register_gates(node, infra_clks, ARRAY_SIZE(infra_clks),
 			       clk_data, &pdev->dev);
 

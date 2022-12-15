@@ -156,7 +156,7 @@ EXPORT_SYMBOL_GPL(mtk_mux_gate_clr_set_upd_ops);
 
 static struct clk_hw *mtk_clk_register_mux(const struct mtk_mux *mux,
 				 struct regmap *regmap,
-				 spinlock_t *lock)
+				 spinlock_t *lock, struct device *dev)
 {
 	struct mtk_clk_mux *clk_mux;
 	struct clk_init_data init = {};
@@ -177,7 +177,7 @@ static struct clk_hw *mtk_clk_register_mux(const struct mtk_mux *mux,
 	clk_mux->lock = lock;
 	clk_mux->hw.init = &init;
 
-	ret = clk_hw_register(NULL, &clk_mux->hw);
+	ret = clk_hw_register(dev, &clk_mux->hw);
 	if (ret) {
 		kfree(clk_mux);
 		return ERR_PTR(ret);
@@ -201,7 +201,8 @@ static void mtk_clk_unregister_mux(struct clk_hw *hw)
 int mtk_clk_register_muxes(const struct mtk_mux *muxes,
 			   int num, struct device_node *node,
 			   spinlock_t *lock,
-			   struct clk_hw_onecell_data *clk_data)
+			   struct clk_hw_onecell_data *clk_data,
+			   struct device *dev)
 {
 	struct regmap *regmap;
 	struct clk_hw *hw;
@@ -222,7 +223,7 @@ int mtk_clk_register_muxes(const struct mtk_mux *muxes,
 			continue;
 		}
 
-		hw = mtk_clk_register_mux(mux, regmap, lock);
+		hw = mtk_clk_register_mux(mux, regmap, lock, dev);
 
 		if (IS_ERR(hw)) {
 			pr_err("Failed to register clk %s: %pe\n", mux->name,
