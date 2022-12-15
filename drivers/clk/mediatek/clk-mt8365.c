@@ -954,7 +954,7 @@ static int clk_mt8365_top_probe(struct platform_device *pdev)
 
 	ret = mtk_clk_register_composites(top_misc_mux_gates,
 					  ARRAY_SIZE(top_misc_mux_gates), base,
-					  &mt8365_clk_lock, clk_data);
+					  &mt8365_clk_lock, clk_data, &pdev->dev);
 	if (ret)
 		goto unregister_muxes;
 
@@ -1081,7 +1081,8 @@ static int clk_mt8365_mcu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	ret = mtk_clk_register_composites(mcu_muxes, ARRAY_SIZE(mcu_muxes),
-					  base, &mt8365_clk_lock, clk_data);
+					  base, &mt8365_clk_lock, clk_data,
+					  &pdev->dev);
 	if (ret)
 		goto free_clk_data;
 

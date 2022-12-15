@@ -115,7 +115,7 @@ static int clk_mt6795_pericfg_probe(struct platform_device *pdev)
 		goto free_clk_data;
 
 	ret = mtk_clk_register_composites(peri_clks, ARRAY_SIZE(peri_clks), base,
-					  &mt6795_peri_clk_lock, clk_data);
+					  &mt6795_peri_clk_lock, clk_data, &pdev->dev);
 	if (ret)
 		goto unregister_gates;
 

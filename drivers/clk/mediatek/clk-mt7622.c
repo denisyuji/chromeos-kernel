@@ -647,7 +647,8 @@ static int mtk_topckgen_init(struct platform_device *pdev)
 				 clk_data);
 
 	mtk_clk_register_composites(top_muxes, ARRAY_SIZE(top_muxes),
-				    base, &mt7622_clk_lock, clk_data);
+				    base, &mt7622_clk_lock, clk_data,
+				    &pdev->dev);
 
 	mtk_clk_register_dividers(top_adj_divs, ARRAY_SIZE(top_adj_divs),
 				  base, &mt7622_clk_lock, clk_data);
@@ -725,7 +726,7 @@ static int mtk_pericfg_init(struct platform_device *pdev)
 			       clk_data, &pdev->dev);
 
 	mtk_clk_register_composites(peri_muxes, ARRAY_SIZE(peri_muxes), base,
-				    &mt7622_clk_lock, clk_data);
+				    &mt7622_clk_lock, clk_data, &pdev->dev);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 	if (r)

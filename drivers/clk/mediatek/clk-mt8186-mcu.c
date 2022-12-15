@@ -66,7 +66,7 @@ static int clk_mt8186_mcu_probe(struct platform_device *pdev)
 	}
 
 	r = mtk_clk_register_composites(mcu_muxes, ARRAY_SIZE(mcu_muxes), base,
-					NULL, clk_data);
+					NULL, clk_data, &pdev->dev);
 	if (r)
 		goto free_mcu_data;
 

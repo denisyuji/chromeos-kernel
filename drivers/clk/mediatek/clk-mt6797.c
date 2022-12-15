@@ -397,7 +397,7 @@ static int mtk_topckgen_init(struct platform_device *pdev)
 				 clk_data);
 
 	mtk_clk_register_composites(top_muxes, ARRAY_SIZE(top_muxes), base,
-				    &mt6797_clk_lock, clk_data);
+				    &mt6797_clk_lock, clk_data, &pdev->dev);
 
 	return of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 }

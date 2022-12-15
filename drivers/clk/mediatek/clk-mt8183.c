@@ -1170,10 +1170,10 @@ static int clk_mt8183_top_probe(struct platform_device *pdev)
 		node, &mt8183_clk_lock, top_clk_data);
 
 	mtk_clk_register_composites(top_aud_muxes, ARRAY_SIZE(top_aud_muxes),
-		base, &mt8183_clk_lock, top_clk_data);
+		base, &mt8183_clk_lock, top_clk_data, &pdev->dev);
 
 	mtk_clk_register_composites(top_aud_divs, ARRAY_SIZE(top_aud_divs),
-		base, &mt8183_clk_lock, top_clk_data);
+		base, &mt8183_clk_lock, top_clk_data, &pdev->dev);
 
 	mtk_clk_register_gates(node, top_clks, ARRAY_SIZE(top_clks),
 		top_clk_data, &pdev->dev);
@@ -1237,7 +1237,7 @@ static int clk_mt8183_mcu_probe(struct platform_device *pdev)
 	clk_data = mtk_alloc_clk_data(CLK_MCU_NR_CLK);
 
 	mtk_clk_register_composites(mcu_muxes, ARRAY_SIZE(mcu_muxes), base,
-			&mt8183_clk_lock, clk_data);
+			&mt8183_clk_lock, clk_data, &pdev->dev);
 
 	return of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 }

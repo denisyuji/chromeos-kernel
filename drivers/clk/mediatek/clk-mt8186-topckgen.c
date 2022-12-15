@@ -743,12 +743,12 @@ static int clk_mt8186_topck_probe(struct platform_device *pdev)
 		goto unregister_factors;
 
 	r = mtk_clk_register_composites(top_muxes, ARRAY_SIZE(top_muxes), base,
-					&mt8186_clk_lock, clk_data);
+					&mt8186_clk_lock, clk_data, &pdev->dev);
 	if (r)
 		goto unregister_muxes;
 
 	r = mtk_clk_register_composites(top_adj_divs, ARRAY_SIZE(top_adj_divs), base,
-					&mt8186_clk_lock, clk_data);
+					&mt8186_clk_lock, clk_data, &pdev->dev);
 	if (r)
 		goto unregister_composite_muxes;
 

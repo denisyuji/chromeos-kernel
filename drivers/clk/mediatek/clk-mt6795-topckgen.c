@@ -558,7 +558,7 @@ static int clk_mt6795_topckgen_probe(struct platform_device *pdev)
 		goto unregister_factors;
 
 	ret = mtk_clk_register_composites(top_aud_divs, ARRAY_SIZE(top_aud_divs), base,
-					  &mt6795_top_clk_lock, clk_data);
+					  &mt6795_top_clk_lock, clk_data, &pdev->dev);
 	if (ret)
 		goto unregister_muxes;
 

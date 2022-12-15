@@ -1347,7 +1347,7 @@ static int clk_mt2712_top_probe(struct platform_device *pdev)
 			top_clk_data);
 	mtk_clk_register_factors(top_divs, ARRAY_SIZE(top_divs), top_clk_data);
 	mtk_clk_register_composites(top_muxes, ARRAY_SIZE(top_muxes), base,
-			&mt2712_clk_lock, top_clk_data);
+			&mt2712_clk_lock, top_clk_data, &pdev->dev);
 	mtk_clk_register_dividers(top_adj_divs, ARRAY_SIZE(top_adj_divs), base,
 			&mt2712_clk_lock, top_clk_data);
 	mtk_clk_register_gates(node, top_clks, ARRAY_SIZE(top_clks),
@@ -1422,7 +1422,7 @@ static int clk_mt2712_mcu_probe(struct platform_device *pdev)
 	clk_data = mtk_alloc_clk_data(CLK_MCU_NR_CLK);
 
 	mtk_clk_register_composites(mcu_muxes, ARRAY_SIZE(mcu_muxes), base,
-			&mt2712_clk_lock, clk_data);
+			&mt2712_clk_lock, clk_data, &pdev->dev);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 
