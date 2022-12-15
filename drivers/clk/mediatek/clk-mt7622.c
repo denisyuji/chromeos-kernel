@@ -674,7 +674,7 @@ static int mtk_infrasys_init(struct platform_device *pdev)
 			       clk_data, &pdev->dev);
 
 	mtk_clk_register_cpumuxes(node, infra_muxes, ARRAY_SIZE(infra_muxes),
-				  clk_data);
+				  clk_data, &pdev->dev);
 
 	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get,
 				   clk_data);

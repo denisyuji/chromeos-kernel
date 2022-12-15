@@ -59,7 +59,7 @@ static const struct clk_ops clk_cpumux_ops = {
 
 static struct clk_hw *
 mtk_clk_register_cpumux(const struct mtk_composite *mux,
-			struct regmap *regmap)
+			struct regmap *regmap, struct device *dev)
 {
 	struct mtk_clk_cpumux *cpumux;
 	int ret;
@@ -81,7 +81,7 @@ mtk_clk_register_cpumux(const struct mtk_composite *mux,
 	cpumux->regmap = regmap;
 	cpumux->hw.init = &init;
 
-	ret = clk_hw_register(NULL, &cpumux->hw);
+	ret = clk_hw_register(dev, &cpumux->hw);
 	if (ret) {
 		kfree(cpumux);
 		return ERR_PTR(ret);
@@ -104,7 +104,8 @@ static void mtk_clk_unregister_cpumux(struct clk_hw *hw)
 
 int mtk_clk_register_cpumuxes(struct device_node *node,
 			      const struct mtk_composite *clks, int num,
-			      struct clk_hw_onecell_data *clk_data)
+			      struct clk_hw_onecell_data *clk_data,
+			      struct device *dev)
 {
 	int i;
 	struct clk_hw *hw;
@@ -125,7 +126,7 @@ int mtk_clk_register_cpumuxes(struct device_node *node,
 			continue;
 		}
 
-		hw = mtk_clk_register_cpumux(mux, regmap);
+		hw = mtk_clk_register_cpumux(mux, regmap, dev);
 		if (IS_ERR(hw)) {
 			pr_err("Failed to register clk %s: %pe\n", mux->name,
 			       hw);
