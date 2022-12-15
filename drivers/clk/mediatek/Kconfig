@@ -20,9 +20,9 @@ config COMMON_CLK_MEDIATEK_FHCTL
 
 config COMMON_CLK_MT2701
 	bool "Clock driver for MediaTek MT2701"
-	depends on (ARCH_MEDIATEK && ARM) || COMPILE_TEST
+	depends on (ARCH_MEDIATEK) || COMPILE_TEST
 	select COMMON_CLK_MEDIATEK
-	default ARCH_MEDIATEK && ARM
+	default ARCH_MEDIATEK
 	help
 	  This driver supports MediaTek MT2701 basic clocks.
 
@@ -367,7 +367,7 @@ config COMMON_CLK_MT7622_AUDSYS
 
 config COMMON_CLK_MT7629
 	bool "Clock driver for MediaTek MT7629"
-	depends on (ARCH_MEDIATEK && ARM) || COMPILE_TEST
+	depends on (ARCH_MEDIATEK) || COMPILE_TEST
 	select COMMON_CLK_MEDIATEK
 	default ARCH_MEDIATEK && ARM
 	help
@@ -407,7 +407,7 @@ config COMMON_CLK_MT7986_ETHSYS
 
 config COMMON_CLK_MT8135
 	bool "Clock driver for MediaTek MT8135"
-	depends on (ARCH_MEDIATEK && ARM) || COMPILE_TEST
+	depends on (ARCH_MEDIATEK) || COMPILE_TEST
 	select COMMON_CLK_MEDIATEK
 	default ARCH_MEDIATEK && ARM
 	help
