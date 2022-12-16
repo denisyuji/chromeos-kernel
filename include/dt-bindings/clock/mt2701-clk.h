@@ -7,6 +7,9 @@
 #ifndef _DT_BINDINGS_CLK_MT2701_H
 #define _DT_BINDINGS_CLK_MT2701_H
 
+/* Dummy clock for backwards compatibility */
+#define CLK_DUMMY			0
+
 /* TOPCKGEN */
 #define CLK_TOP_SYSPLL				1
 #define CLK_TOP_SYSPLL_D2			2

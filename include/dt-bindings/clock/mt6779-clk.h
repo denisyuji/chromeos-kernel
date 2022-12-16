@@ -7,6 +7,9 @@
 #ifndef _DT_BINDINGS_CLK_MT6779_H
 #define _DT_BINDINGS_CLK_MT6779_H
 
+/* Dummy clock for backwards compatibility */
+#define CLK_DUMMY			0
+
 /* TOPCKGEN */
 #define CLK_TOP_AXI			1
 #define CLK_TOP_MM			2
