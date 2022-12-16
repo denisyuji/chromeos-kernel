@@ -7,6 +7,9 @@
 #ifndef _DT_BINDINGS_CLK_MT8173_H
 #define _DT_BINDINGS_CLK_MT8173_H
 
+/* Dummy clock for backwards compatibility */
+#define CLK_DUMMY			0
+
 /* TOPCKGEN */
 
 #define CLK_TOP_CLKPH_MCK_O		1
