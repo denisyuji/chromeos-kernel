@@ -65,6 +65,11 @@
 			reg = <0x000>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -83,6 +88,11 @@
 			reg = <0x100>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -101,6 +111,11 @@
 			reg = <0x200>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -119,6 +134,11 @@
 			reg = <0x300>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -137,6 +157,11 @@
 			reg = <0x400>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -155,6 +180,11 @@
 			reg = <0x500>;
 			enable-method = "psci";
 			clock-frequency = <2000000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_LL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster0_opp>;
+			dynamic-power-coefficient = <84>;
 			capacity-dmips-mhz = <382>;
 			cpu-idle-states = <&cpu_ret_l &cpu_off_l>;
 			i-cache-size = <32768>;
@@ -173,6 +203,11 @@
 			reg = <0x600>;
 			enable-method = "psci";
 			clock-frequency = <2050000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_BL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster1_opp>;
+			dynamic-power-coefficient = <335>;
 			capacity-dmips-mhz = <1024>;
 			cpu-idle-states = <&cpu_ret_b &cpu_off_b>;
 			i-cache-size = <65536>;
@@ -191,6 +226,11 @@
 			reg = <0x700>;
 			enable-method = "psci";
 			clock-frequency = <2050000000>;
+			clocks = <&mcusys CLK_MCU_ARMPLL_BL_SEL>,
+				 <&apmixedsys CLK_APMIXED_MAINPLL>;
+			clock-names = "cpu", "intermediate";
+			operating-points-v2 = <&cluster1_opp>;
+			dynamic-power-coefficient = <335>;
 			capacity-dmips-mhz = <1024>;
 			cpu-idle-states = <&cpu_ret_b &cpu_off_b>;
 			i-cache-size = <65536>;
@@ -479,7 +519,8 @@
 
 				power-domain@MT8186_POWER_DOMAIN_DIS {
 					reg = <MT8186_POWER_DOMAIN_DIS>;
-					clocks = <&topckgen CLK_TOP_DISP>,
+					clocks = <&topckgen CLK_MM_APB_MM_BUS>,
+						 <&topckgen CLK_MM_DISP_26M>,
 						 <&topckgen CLK_TOP_MDP>,
 						 <&mmsys CLK_MM_SMI_INFRA>,
 						 <&mmsys CLK_MM_SMI_COMMON>,
