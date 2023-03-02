@@ -429,50 +429,31 @@
 
 			port@0 {
 				reg = <0>;
+
 				anx7625_dp_in: endpoint {
-					remote-endpoint = <&dpi_out>;
 					bus-type = <7>;
-				};
-			};
-		};
-
-		switches {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			switch@0 {
-				compatible = "typec-switch";
-				reg = <0>;
-				mode-switch;
-
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port@0 {
-						reg = <0>;
-						anx_typec0: endpoint {
-							remote-endpoint = <&typec_port0>;
-						};
-					};
+					remote-endpoint = <&dpi_out>;
 				};
 			};
 
-			switch@1 {
-				compatible = "typec-switch";
+			port@1 {
 				reg = <1>;
-				mode-switch;
 
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
 
-					port@0 {
-						reg = <0>;
-						anx_typec1: endpoint {
-							remote-endpoint = <&typec_port1>;
-						};
-					};
+				anx_typec0: endpoint@0 {
+					reg = <0>;
+					data-lanes = <2 3>;
+					mode-switch;
+					remote-endpoint = <&typec_port0>;
+				};
+
+				anx_typec1: endpoint@1 {
+					reg = <1>;
+					data-lanes = <0 1>;
+					mode-switch;
+					remote-endpoint = <&typec_port1>;
 				};
 			};
 		};
