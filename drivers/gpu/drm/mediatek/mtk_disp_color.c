@@ -31,10 +31,13 @@ struct mtk_disp_color_data {
 	unsigned int color_offset;
 };
 
-/*
- * struct mtk_disp_color - DISP_COLOR driver structure
- * @crtc: associated crtc to report irq events to
- * @data: platform colour driver data
+/**
+ * struct mtk_disp_color - DISP_COLOR (Display Color) driver structure
+ * @crtc:     associated crtc to report irq events to
+ * @clk:      clock for DISP_COLOR block
+ * @regs:     MMIO registers base
+ * @cmdq_reg: CMDQ Client register
+ * @data:     platform specific data for DISP_COLOR
  */
 struct mtk_disp_color {
 	struct drm_crtc				*crtc;

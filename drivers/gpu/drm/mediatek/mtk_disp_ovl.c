@@ -76,10 +76,15 @@ struct mtk_disp_ovl_data {
 	bool supports_afbc;
 };
 
-/*
- * struct mtk_disp_ovl - DISP_OVL driver structure
- * @crtc: associated crtc to report vblank events to
- * @data: platform data
+/**
+ * struct mtk_disp_ovl - Display Overlay driver structure
+ * @crtc:           associated crtc to report vblank events to
+ * @clk:            clock for DISP_OVL block
+ * @regs:           MMIO registers base
+ * @cmdq_reg:       CMDQ Client register
+ * @data:           platform data
+ * @vblank_cb:      vblank callback function
+ * @vblank_cb_data: pointer to data that will be passed to vblank_cb()
  */
 struct mtk_disp_ovl {
 	struct drm_crtc			*crtc;

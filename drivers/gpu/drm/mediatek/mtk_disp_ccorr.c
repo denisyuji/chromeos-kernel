@@ -35,9 +35,11 @@ struct mtk_disp_ccorr_data {
 };
 
 /**
- * struct mtk_disp_ccorr - DISP_CCORR driver structure
- * @ddp_comp - structure containing type enum and hardware resources
- * @crtc - associated crtc to report irq events to
+ * struct mtk_disp_ccorr - Display Color Correction driver structure
+ * @clk:      clock for DISP_CCORR block
+ * @regs:     MMIO registers base
+ * @cmdq_reg: CMDQ Client register
+ * @data:     platform specific data for DISP_CCORR
  */
 struct mtk_disp_ccorr {
 	struct clk *clk;

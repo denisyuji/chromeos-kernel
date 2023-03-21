@@ -59,9 +59,15 @@ struct mtk_disp_rdma_data {
 	unsigned int fifo_size;
 };
 
-/*
- * struct mtk_disp_rdma - DISP_RDMA driver structure
- * @data: local driver data
+/**
+ * struct mtk_disp_rdma - Display Read DMA driver structure
+ * @clk:            clock for DISP_RDMA block
+ * @regs:           MMIO registers base
+ * @cmdq_reg:       CMDQ Client register
+ * @data:           platform data
+ * @vblank_cb:      vblank callback function
+ * @vblank_cb_data: pointer to data that will be passed to vblank_cb()
+ * @fifo_size:      size of DISP_RDMA block's FIFO
  */
 struct mtk_disp_rdma {
 	struct clk			*clk;
