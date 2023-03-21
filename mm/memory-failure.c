@@ -62,14 +62,13 @@
 #include <linux/page-isolation.h>
 #include <linux/pagewalk.h>
 #include <linux/shmem_fs.h>
-#include <linux/sysctl.h>
 #include "swap.h"
 #include "internal.h"
 #include "ras/ras_event.h"
 
-static int sysctl_memory_failure_early_kill __read_mostly;
+int sysctl_memory_failure_early_kill __read_mostly = 0;
 
-static int sysctl_memory_failure_recovery __read_mostly = 1;
+int sysctl_memory_failure_recovery __read_mostly = 1;
 
 atomic_long_t num_poisoned_pages __read_mostly = ATOMIC_LONG_INIT(0);
 
@@ -87,71 +86,6 @@ inline void num_poisoned_pages_sub(unsigned long pfn, long i)
 	if (pfn != -1UL)
 		memblk_nr_poison_sub(pfn, i);
 }
-
-/**
- * MF_ATTR_RO - Create sysfs entry for each memory failure statistics.
- * @_name: name of the file in the per NUMA sysfs directory.
- */
-#define MF_ATTR_RO(_name)					\
-static ssize_t _name##_show(struct device *dev,			\
-			    struct device_attribute *attr,	\
-			    char *buf)				\
-{								\
-	struct memory_failure_stats *mf_stats =			\
-		&NODE_DATA(dev->id)->mf_stats;			\
-	return sprintf(buf, "%lu\n", mf_stats->_name);		\
-}								\
-static DEVICE_ATTR_RO(_name)
-
-MF_ATTR_RO(total);
-MF_ATTR_RO(ignored);
-MF_ATTR_RO(failed);
-MF_ATTR_RO(delayed);
-MF_ATTR_RO(recovered);
-
-static struct attribute *memory_failure_attr[] = {
-	&dev_attr_total.attr,
-	&dev_attr_ignored.attr,
-	&dev_attr_failed.attr,
-	&dev_attr_delayed.attr,
-	&dev_attr_recovered.attr,
-	NULL,
-};
-
-const struct attribute_group memory_failure_attr_group = {
-	.name = "memory_failure",
-	.attrs = memory_failure_attr,
-};
-
-#ifdef CONFIG_SYSCTL
-static struct ctl_table memory_failure_table[] = {
-	{
-		.procname	= "memory_failure_early_kill",
-		.data		= &sysctl_memory_failure_early_kill,
-		.maxlen		= sizeof(sysctl_memory_failure_early_kill),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= SYSCTL_ZERO,
-		.extra2		= SYSCTL_ONE,
-	},
-	{
-		.procname	= "memory_failure_recovery",
-		.data		= &sysctl_memory_failure_recovery,
-		.maxlen		= sizeof(sysctl_memory_failure_recovery),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec_minmax,
-		.extra1		= SYSCTL_ZERO,
-		.extra2		= SYSCTL_ONE,
-	},
-};
-
-static int __init memory_failure_sysctl_init(void)
-{
-	register_sysctl_init("vm", memory_failure_table);
-	return 0;
-}
-late_initcall(memory_failure_sysctl_init);
-#endif /* CONFIG_SYSCTL */
 
 /*
  * Return values:
