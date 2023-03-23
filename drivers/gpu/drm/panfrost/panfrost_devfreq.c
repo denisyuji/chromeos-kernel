@@ -92,8 +92,8 @@ static int panfrost_read_speedbin(struct device *dev)
 	if (ret) {
 		/*
 		 * -ENOENT means that this platform doesn't support speedbins
-		 * as it didn't declare any speed-bin nvmem: in this case, we
-		 * keep going without it; any other error means that we are
+		 * as it didn't declare any gpu-speedbin nvmem: in this case,
+		 * we keep going without it; any other error means that we are
 		 * supposed to read the bin value, but we failed doing so.
 		 */
 		if (ret != -ENOENT) {
@@ -103,16 +103,7 @@ static int panfrost_read_speedbin(struct device *dev)
 
 		return 0;
 	}
-
-	/* Validate the speed-bin value */
-	if (val > 31) {
-		DRM_DEV_ERROR(dev, "Cannot handle speedbin value %u!", val);
-		return -EINVAL;
-	}
-
-	/* Ready to go! */
-	val = BIT(val);
-	DRM_DEV_DEBUG(dev, "Using speed bin = 0x%x\n", val);
+	DRM_DEV_DEBUG(dev, "Using speedbin = 0x%x\n", val);
 
 	return devm_pm_opp_set_supported_hw(dev, &val, 1);
 }
