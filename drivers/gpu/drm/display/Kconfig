@@ -50,6 +50,14 @@ config DRM_DISPLAY_HDMI_HELPER
 	help
 	  DRM display helpers for HDMI.
 
+config DRM_DISPLAY_DP_TYPEC_HELPER
+	def_bool y
+	depends on DRM_DISPLAY_HELPER
+	depends on DRM_DISPLAY_HELPER=TYPEC || TYPEC=y
+	help
+	  Choose this option to enable helpers for registering USB Type-C
+	  switches when USB Type-C DisplayPort Alternate mode is used.
+
 config DRM_DP_AUX_CHARDEV
 	bool "DRM DP AUX Interface"
 	depends on DRM && DRM_DISPLAY_HELPER
