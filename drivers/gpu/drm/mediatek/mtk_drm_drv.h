@@ -46,6 +46,7 @@ struct mtk_mmsys_driver_data {
 	bool shadow_register;
 	unsigned int mmsys_id;
 	unsigned int mmsys_dev_num;
+	u32 max_pitch;
 };
 
 struct mtk_drm_private {
