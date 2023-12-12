@@ -163,6 +163,20 @@ static const u32 mt8195_ovl_crc_ofs[] = {
 	DISP_REG_OVL_CRC,
 };
 
+/**
+ * struct mtk_disp_ovl_data - ovl driver data
+ * @addr: offset of the first layer (layer-0)
+ * @gmc_bits: gmc (gating memory clock) bit masks for adjusting positivity for ovl
+ * @layer_nr: layer numbers that ovl supports
+ * @fmt_rgb565_is_0: whether or not rgb565 is represented as 0
+ * @smi_id_en: determine if smi needs to be enabled
+ * @supports_afbc: determine if ovl supports afbc
+ * @formats: format table that ovl supports
+ * @num_formats: number of formats that ovl supports
+ * @supports_clrfmt_ext: whether the ovl supports clear format (for alpha blend)
+ * @crc_ofs: crc offset table
+ * @crc_cnt: count of crc registers (could be more than one bank)
+ */
 struct mtk_disp_ovl_data {
 	unsigned int addr;
 	unsigned int gmc_bits;
@@ -177,10 +191,15 @@ struct mtk_disp_ovl_data {
 	size_t crc_cnt;
 };
 
-/*
+/**
  * struct mtk_disp_ovl - DISP_OVL driver structure
  * @crtc: associated crtc to report vblank events to
+ * @clk: clock of the ovl
+ * @regs: base address of the ovl register that can be accessed by cpu
+ * @cmdq_reg: register related info for cmdq (subsys, offset ...etc.)
  * @data: platform data
+ * @vblank_cb: callback function when vblank irq happened
+ * @vblank_cb_data: data to the callback function
  * @crc: crc related information
  */
 struct mtk_disp_ovl {
