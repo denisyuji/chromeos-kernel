@@ -1244,7 +1244,7 @@ void mtk_drm_crc_destroy(struct mtk_drm_crc *crc)
 		crc->pa = 0;
 	}
 	if (crc->cmdq_client.chan) {
-		mtk_drm_cmdq_pkt_destroy(&crc->cmdq_handle);
+		cmdq_pkt_destroy(&crc->cmdq_handle);
 		mbox_free_channel(crc->cmdq_client.chan);
 		crc->cmdq_client.chan = NULL;
 	}
@@ -1257,6 +1257,7 @@ void mtk_drm_crc_destroy(struct mtk_drm_crc *crc)
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
 void mtk_drm_crc_cmdq_create(struct device *dev, struct mtk_drm_crc *crc)
 {
+	struct cmdq_pkt *cpkt;
 	int i;
 
 	if (!crc->cnt) {
@@ -1280,10 +1281,13 @@ void mtk_drm_crc_cmdq_create(struct device *dev, struct mtk_drm_crc *crc)
 		goto cleanup;
 	}
 
-	if (mtk_drm_cmdq_pkt_create(&crc->cmdq_client, &crc->cmdq_handle, PAGE_SIZE)) {
+	cpkt = cmdq_pkt_create(&crc->cmdq_client, PAGE_SIZE);
+	if (IS_ERR(cpkt)) {
 		dev_warn(dev, "%s: failed to create cmdq packet\n", __func__);
 		goto cleanup;
 	}
+
+	memcpy(&crc->cmdq_handle, cpkt, sizeof(crc->cmdq_handle)); /* this is a temporary bad hack */
 
 	if (!crc->va) {
 		dev_warn(dev, "%s: no memory\n", __func__);
