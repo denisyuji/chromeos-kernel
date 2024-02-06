@@ -33,13 +33,12 @@ struct mtk_drm_crc {
 	u32 rst_msk;
 	size_t cnt;
 	u32 *va;
-#if IS_REACHABLE(CONFIG_MTK_CMDQ)
+	/* cmdq */
 	dma_addr_t pa;
 	u32 cmdq_event;
 	struct cmdq_client_reg *cmdq_reg;
-	struct cmdq_client cmdq_client;
-	struct cmdq_pkt cmdq_handle;
-#endif
+	struct cmdq_client *cmdq_client;
+	struct cmdq_pkt *cmdq_handle;
 };
 
 void mtk_drm_crc_init(struct mtk_drm_crc *crc,
