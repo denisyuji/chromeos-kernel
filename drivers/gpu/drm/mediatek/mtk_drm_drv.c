@@ -211,6 +211,7 @@ static const unsigned int mt8192_mtk_ddp_ext[] = {
 	DDP_COMPONENT_DPI0,
 };
 
+#if 0
 static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_OVL0,
 	DDP_COMPONENT_RDMA0,
@@ -224,7 +225,43 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_DP_INTF0,
 };
 
-static const unsigned int mt8195_mtk_ddp_ext[] = {
+static const unsigned int mt8195_mtk_ddp_vdo0_ext[] = {
+	DDP_COMPONENT_OVL0,
+	DDP_COMPONENT_RDMA0,
+	DDP_COMPONENT_COLOR0,
+	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_AAL0,
+	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_DITHER0,
+	DDP_COMPONENT_DSI0
+};
+
+static const unsigned int mt8195_mtk_ddp_third_dualpipe[] = {
+	DDP_COMPONENT_OVL1,
+	DDP_COMPONENT_RDMA1,
+	DDP_COMPONENT_COLOR1,
+	//DDP_COMPONENT_CCORR1,
+	DDP_COMPONENT_AAL1,
+	//DDP_COMPONENT_GAMMA1,
+	DDP_COMPONENT_DITHER1,
+	DDP_COMPONENT_MERGE0,
+	DDP_COMPONENT_DSI0
+};
+#else
+static const unsigned int mt8195_mtk_ddp_main[] = {
+	DDP_COMPONENT_OVL0,
+	DDP_COMPONENT_RDMA0,
+	DDP_COMPONENT_COLOR0,
+	DDP_COMPONENT_CCORR,
+	DDP_COMPONENT_AAL0,
+	DDP_COMPONENT_GAMMA,
+	DDP_COMPONENT_DITHER0,
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_DSI0
+};
+#endif
+
+static const unsigned int mt8195_mtk_ddp_vdo1_ext[] = {
 	DDP_COMPONENT_DRM_OVL_ADAPTOR,
 	DDP_COMPONENT_MERGE5,
 	DDP_COMPONENT_DP_INTF1,
@@ -308,13 +345,17 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.main_path = mt8195_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8195_mtk_ddp_main),
+	/*.ext_path = mt8195_mtk_ddp_vdo0_ext,
+	.ext_len = ARRAY_SIZE(mt8195_mtk_ddp_vdo0_ext),
+	.third_path = mt8195_mtk_ddp_third_dualpipe,
+	.third_len = ARRAY_SIZE(mt8195_mtk_ddp_third_dualpipe),*/
 	.mmsys_dev_num = 2,
 	.max_pitch = GENMASK(15, 0),
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
-	.ext_path = mt8195_mtk_ddp_ext,
-	.ext_len = ARRAY_SIZE(mt8195_mtk_ddp_ext),
+	.ext_path = mt8195_mtk_ddp_vdo1_ext,
+	.ext_len = ARRAY_SIZE(mt8195_mtk_ddp_vdo1_ext),
 	.mmsys_id = 1,
 	.mmsys_dev_num = 2,
 	.max_pitch = GENMASK(15, 0),
